@@ -1,6 +1,8 @@
+mod compiler;
 mod scanner;
 
 fn main() {
     let input = "1+1";
-    scanner::scan(input);
+    let tokens = scanner::scan(input);
+    compiler::compile(&tokens);
 }
