@@ -149,6 +149,12 @@ impl Scanner {
         while self.peek().is_ascii_digit() {
             self.advance();
         }
+        if self.peek() == '.' && self.peek_offset(1).is_ascii_digit() {
+            self.advance();
+            while self.peek().is_ascii_digit() {
+                self.advance();
+            }
+        }
         Token::new(
             TokenType::Number,
             self.source[self.start..self.current].iter().collect(),
@@ -263,6 +269,14 @@ mod tests {
     #[test]
     fn parses_numbers() {
         let input = "12345";
+        let tokens = super::scan(input);
+        assert_eq!(tokens.len(), 2);
+        assert_eq!(tokens[0].token_type, super::TokenType::Number);
+    }
+
+    #[test]
+    fn parses_decimal_numbers() {
+        let input = "123.45";
         let tokens = super::scan(input);
         assert_eq!(tokens.len(), 2);
         assert_eq!(tokens[0].token_type, super::TokenType::Number);
