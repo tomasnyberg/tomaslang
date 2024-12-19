@@ -5,6 +5,8 @@ use std::fmt;
 pub enum TokenType {
     LeftParen,
     RightParen,
+    LeftBracket,
+    RightBracket,
     LeftBrace,
     RightBrace,
     Comma,
@@ -189,6 +191,24 @@ impl Scanner {
         }
     }
 
+    pub fn string(&mut self, c: char) -> Token {
+        while self.peek() != c {
+            if self.peek() == '\n' || self.is_at_end() {
+                // Don't allow multiline strings (TODO allow it?)
+                return Token::new(TokenType::Error, String::from(""), self.line);
+            }
+            self.advance();
+        }
+        self.advance(); // consume closing
+        Token::new(
+            TokenType::String,
+            self.source[self.start + 1..self.current - 1]
+                .iter()
+                .collect(),
+            self.line,
+        )
+    }
+
     pub fn scan_token(&mut self) -> Token {
         self.skip_whitespace_and_comments();
         self.start = self.current;
@@ -202,7 +222,56 @@ impl Scanner {
         if c.is_ascii_alphabetic() {
             return self.identifier();
         }
-        Token::new(TokenType::Error, String::from(""), self.line)
+
+        match c {
+            '(' => Token::new(TokenType::LeftParen, String::from("("), self.line),
+            ')' => Token::new(TokenType::RightParen, String::from(")"), self.line),
+            '{' => Token::new(TokenType::LeftBrace, String::from("{"), self.line),
+            '}' => Token::new(TokenType::RightBrace, String::from("}"), self.line),
+            '[' => Token::new(TokenType::LeftBracket, String::from("["), self.line),
+            ']' => Token::new(TokenType::RightBracket, String::from("]"), self.line),
+            ',' => Token::new(TokenType::Comma, String::from(","), self.line),
+            '.' => Token::new(TokenType::Dot, String::from("."), self.line),
+            '-' => Token::new(TokenType::Minus, String::from("-"), self.line),
+            '+' => Token::new(TokenType::Plus, String::from("+"), self.line),
+            ';' => Token::new(TokenType::Semicolon, String::from(";"), self.line),
+            '*' => Token::new(TokenType::Star, String::from("*"), self.line),
+            '/' => Token::new(TokenType::Slash, String::from("/"), self.line),
+            '!' => {
+                if self.peek() == '=' {
+                    self.advance();
+                    Token::new(TokenType::BangEqual, String::from("!"), self.line)
+                } else {
+                    Token::new(TokenType::Bang, String::from("!"), self.line)
+                }
+            }
+            '=' => {
+                if self.peek() == '=' {
+                    self.advance();
+                    Token::new(TokenType::EqualEqual, String::from("=="), self.line)
+                } else {
+                    Token::new(TokenType::Equal, String::from("="), self.line)
+                }
+            }
+            '<' => {
+                if self.peek() == '=' {
+                    self.advance();
+                    Token::new(TokenType::LessEqual, String::from("<="), self.line)
+                } else {
+                    Token::new(TokenType::Less, String::from("<"), self.line)
+                }
+            }
+            '>' => {
+                if self.peek() == '=' {
+                    self.advance();
+                    Token::new(TokenType::GreaterEqual, String::from(">="), self.line)
+                } else {
+                    Token::new(TokenType::Greater, String::from(">"), self.line)
+                }
+            }
+            '\'' | '"' => self.string(c),
+            _ => Token::new(TokenType::Error, String::from(""), self.line),
+        }
     }
 }
 
@@ -289,5 +358,30 @@ mod tests {
         let tokens: Vec<Token> = super::scan(input);
         let seen_types: HashSet<TokenType> = tokens.iter().map(|t| t.token_type).collect();
         assert_eq!(seen_types.len(), tokens.len());
+    }
+
+    #[test]
+    fn parses_one_char_tokens() {
+        let input = "(){}[],.-+;*/=!<>";
+        let tokens: Vec<Token> = super::scan(input);
+        let seen_types: HashSet<TokenType> = tokens.iter().map(|t| t.token_type).collect();
+        assert_eq!(seen_types.len(), tokens.len());
+    }
+
+    #[test]
+    fn parses_two_char_tokens() {
+        let input = "!= == <= >=";
+        let tokens: Vec<Token> = super::scan(input);
+        let seen_types: HashSet<TokenType> = tokens.iter().map(|t| t.token_type).collect();
+        assert_eq!(tokens.len(), 5);
+        assert_eq!(seen_types.len(), tokens.len());
+    }
+
+    #[test]
+    fn parses_strings() {
+        let input = "\"hello world\"";
+        let tokens: Vec<Token> = super::scan(input);
+        assert_eq!(tokens.len(), 2);
+        assert_eq!(tokens[0].token_type, super::TokenType::String);
     }
 }
