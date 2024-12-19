@@ -116,12 +116,24 @@ impl Scanner {
                     self.line += 1;
                     self.advance();
                 }
-                // Only allowing single line comments for now
                 '/' => {
                     if self.peek_offset(1) == '/' {
                         while self.peek() != '\n' && !self.is_at_end() {
                             self.advance();
                         }
+                    } else if self.peek_offset(1) == '*' {
+                        self.advance();
+                        self.advance();
+                        while !(self.is_at_end()
+                            || self.peek() == '*' && self.peek_offset(1) == '/')
+                        {
+                            if self.peek() == '\n' {
+                                self.line += 1;
+                            }
+                            self.advance();
+                        }
+                        self.advance();
+                        self.advance();
                     } else {
                         break;
                     }
@@ -202,6 +214,14 @@ mod tests {
     #[test]
     fn skips_comments() {
         let input = "// this is a comment\n";
+        let tokens = super::scan(input);
+        assert_eq!(tokens.len(), 1);
+        assert_eq!(tokens[0].token_type, super::TokenType::Eof);
+    }
+
+    #[test]
+    fn skips_multiline_comments() {
+        let input = "/* this is a comment\nand this is another comment */";
         let tokens = super::scan(input);
         assert_eq!(tokens.len(), 1);
         assert_eq!(tokens[0].token_type, super::TokenType::Eof);
