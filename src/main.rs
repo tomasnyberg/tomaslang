@@ -1,3 +1,6 @@
+mod scanner;
+
 fn main() {
-    println!("Hello, world!");
+    let input = "1+1";
+    scanner::scan(input);
 }
