@@ -1,6 +1,6 @@
 use std::fmt;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 #[allow(dead_code)]
 pub enum TokenType {
     LeftParen,
@@ -156,6 +156,33 @@ impl Scanner {
         )
     }
 
+    pub fn identifier(&mut self) -> Token {
+        while self.peek().is_ascii_alphanumeric() {
+            self.advance();
+        }
+        let lexeme: String = self.source[self.start..self.current].iter().collect();
+        // TODO PERF: match on only the first couple chars with a match
+        match lexeme.as_str() {
+            "and" => Token::new(TokenType::And, lexeme, self.line),
+            "class" => Token::new(TokenType::Class, lexeme, self.line),
+            "else" => Token::new(TokenType::Else, lexeme, self.line),
+            "false" => Token::new(TokenType::False, lexeme, self.line),
+            "for" => Token::new(TokenType::For, lexeme, self.line),
+            "fun" => Token::new(TokenType::Fun, lexeme, self.line),
+            "if" => Token::new(TokenType::If, lexeme, self.line),
+            "null" => Token::new(TokenType::Null, lexeme, self.line),
+            "or" => Token::new(TokenType::Or, lexeme, self.line),
+            "print" => Token::new(TokenType::Print, lexeme, self.line),
+            "return" => Token::new(TokenType::Return, lexeme, self.line),
+            "super" => Token::new(TokenType::Super, lexeme, self.line),
+            "this" => Token::new(TokenType::This, lexeme, self.line),
+            "true" => Token::new(TokenType::True, lexeme, self.line),
+            "var" => Token::new(TokenType::Var, lexeme, self.line),
+            "while" => Token::new(TokenType::While, lexeme, self.line),
+            _ => Token::new(TokenType::Identifier, lexeme, self.line),
+        }
+    }
+
     pub fn scan_token(&mut self) -> Token {
         self.skip_whitespace_and_comments();
         self.start = self.current;
@@ -165,6 +192,9 @@ impl Scanner {
         let c = self.advance();
         if c.is_ascii_digit() {
             return self.number();
+        }
+        if c.is_ascii_alphabetic() {
+            return self.identifier();
         }
         Token::new(TokenType::Error, String::from(""), self.line)
     }
@@ -194,6 +224,9 @@ pub fn scan(input: &str) -> Vec<Token> {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
+    use crate::scanner::{Token, TokenType};
 
     #[test]
     fn empty_str_should_give_eof() {
@@ -233,5 +266,14 @@ mod tests {
         let tokens = super::scan(input);
         assert_eq!(tokens.len(), 2);
         assert_eq!(tokens[0].token_type, super::TokenType::Number);
+    }
+
+    #[test]
+    fn parses_keywords() {
+        let input =
+            "and class else false for fun if null or print return super this true var while";
+        let tokens: Vec<Token> = super::scan(input);
+        let seen_types: HashSet<TokenType> = tokens.iter().map(|t| t.token_type).collect();
+        assert_eq!(seen_types.len(), tokens.len());
     }
 }
