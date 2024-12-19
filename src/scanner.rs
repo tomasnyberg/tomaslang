@@ -93,6 +93,69 @@ impl Scanner {
         self.tokens
             .push(Token::new(TokenType::Eof, String::from(""), self.line));
     }
+
+    pub fn peek_offset(&self, offset: usize) -> char {
+        if self.current + offset >= self.source.len() {
+            return '\0';
+        }
+        self.source[self.current + offset]
+    }
+
+    pub fn peek(&self) -> char {
+        self.peek_offset(0)
+    }
+
+    pub fn skip_whitespace_and_comments(&mut self) {
+        loop {
+            let c = self.peek();
+            match c {
+                ' ' | '\r' | '\t' => {
+                    self.advance();
+                }
+                '\n' => {
+                    self.line += 1;
+                    self.advance();
+                }
+                // Only allowing single line comments for now
+                '/' => {
+                    if self.peek_offset(1) == '/' {
+                        while self.peek() != '\n' && !self.is_at_end() {
+                            self.advance();
+                        }
+                    } else {
+                        break;
+                    }
+                }
+                _ => {
+                    break;
+                }
+            }
+        }
+    }
+
+    pub fn number(&mut self) -> Token {
+        while self.peek().is_ascii_digit() {
+            self.advance();
+        }
+        Token::new(
+            TokenType::Number,
+            self.source[self.start..self.current].iter().collect(),
+            self.line,
+        )
+    }
+
+    pub fn scan_token(&mut self) -> Token {
+        self.skip_whitespace_and_comments();
+        self.start = self.current;
+        if self.is_at_end() {
+            return Token::new(TokenType::Eof, String::from(""), self.line);
+        }
+        let c = self.advance();
+        if c.is_ascii_digit() {
+            return self.number();
+        }
+        Token::new(TokenType::Error, String::from(""), self.line)
+    }
 }
 
 pub fn scan(input: &str) -> Vec<Token> {
@@ -105,9 +168,12 @@ pub fn scan(input: &str) -> Vec<Token> {
         current: 0,
         line: 1,
     };
-    while !scanner.is_at_end() {
-        scanner.start = scanner.current;
-        scanner.advance();
+    loop {
+        let token = scanner.scan_token();
+        if token.token_type == TokenType::Eof {
+            break;
+        }
+        scanner.tokens.push(token);
     }
 
     scanner.generate_eof();
@@ -123,5 +189,29 @@ mod tests {
         let tokens = super::scan(input);
         assert_eq!(tokens.len(), 1);
         assert_eq!(tokens[0].token_type, super::TokenType::Eof);
+    }
+
+    #[test]
+    fn skips_whitespace() {
+        let input = "     \t          \n            \r\n\n";
+        let tokens = super::scan(input);
+        assert_eq!(tokens.len(), 1);
+        assert_eq!(tokens[0].token_type, super::TokenType::Eof);
+    }
+
+    #[test]
+    fn skips_comments() {
+        let input = "// this is a comment\n";
+        let tokens = super::scan(input);
+        assert_eq!(tokens.len(), 1);
+        assert_eq!(tokens[0].token_type, super::TokenType::Eof);
+    }
+
+    #[test]
+    fn parses_numbers() {
+        let input = "12345";
+        let tokens = super::scan(input);
+        assert_eq!(tokens.len(), 2);
+        assert_eq!(tokens[0].token_type, super::TokenType::Number);
     }
 }
