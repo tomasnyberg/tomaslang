@@ -1,10 +1,4 @@
-use crate::scanner::*;
-
-pub struct Chunk {
-    code: Vec<u8>,
-    lines: Vec<usize>,
-    constants: Vec<f64>,
-}
+use crate::{chunk::*, scanner::*};
 
 struct Parser {
     tokens: Vec<Token>,
@@ -26,9 +20,22 @@ pub enum OpCode {
     Return,
 }
 
-impl Parser {
-    // TODO implement debug printing
+impl OpCode {
+    pub fn from_u8(byte: u8) -> Self {
+        match byte {
+            0 => OpCode::Constant,
+            1 => OpCode::Add,
+            2 => OpCode::Sub,
+            3 => OpCode::Mul,
+            4 => OpCode::Div,
+            5 => OpCode::Negate,
+            6 => OpCode::Return,
+            _ => panic!("Unknown opcode"),
+        }
+    }
+}
 
+impl Parser {
     pub fn match_(&mut self, token_type: TokenType) -> bool {
         if self.tokens[self.current].token_type == token_type {
             self.current += 1;
@@ -84,11 +91,7 @@ impl Parser {
 }
 
 pub fn compile(tokens: &[Token]) -> Chunk {
-    let chunk = Chunk {
-        code: Vec::new(),
-        lines: Vec::new(),
-        constants: Vec::new(),
-    };
+    let chunk = Chunk::new();
     let mut parser = Parser {
         tokens: tokens.to_vec(),
         current: 0,
@@ -122,5 +125,12 @@ mod tests {
         for (i, byte) in expected.iter().enumerate() {
             assert_eq!(*byte, chunk.code[i]);
         }
+    }
+
+    #[test]
+    fn can_decompile() {
+        let tokens: Vec<Token> = scan("1+1-1/1*1");
+        let chunk: Chunk = compile(&tokens);
+        chunk.disassemble("test");
     }
 }
