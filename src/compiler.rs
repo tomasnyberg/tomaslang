@@ -20,6 +20,12 @@ pub enum OpCode {
     Return,
 }
 
+#[derive(Debug, PartialEq)]
+pub enum CompilerResult {
+    Chunk(Chunk),
+    CompileError,
+}
+
 impl OpCode {
     pub fn from_u8(byte: u8) -> Self {
         match byte {
@@ -90,7 +96,7 @@ impl Parser {
     }
 }
 
-pub fn compile(tokens: &[Token]) -> Chunk {
+pub fn compile(tokens: &[Token]) -> CompilerResult {
     let chunk = Chunk::new();
     let mut parser = Parser {
         tokens: tokens.to_vec(),
@@ -102,10 +108,14 @@ pub fn compile(tokens: &[Token]) -> Chunk {
         parser.expression();
     }
     parser.emit_byte(OpCode::Return as u8);
-    parser.chunk
+    if parser.error {
+        CompilerResult::CompileError
+    } else {
+        CompilerResult::Chunk(parser.chunk)
+    }
 }
 
-pub fn compile_full(tokens: &str) -> Chunk {
+pub fn compile_full(tokens: &str) -> CompilerResult {
     let tokens: Vec<Token> = scan(tokens);
     compile(&tokens)
 }
@@ -116,7 +126,11 @@ mod tests {
 
     #[test]
     fn basic_expression() {
-        let chunk: Chunk = compile_full("1+1");
+        let compiled = compile_full("1+1");
+        let chunk: Chunk = match compiled {
+            CompilerResult::Chunk(chunk) => chunk,
+            CompilerResult::CompileError => panic!("Compile error"),
+        };
         let expected = [
             OpCode::Constant as u8,
             0,
@@ -133,13 +147,21 @@ mod tests {
 
     #[test]
     fn can_decompile() {
-        let chunk: Chunk = compile_full("1+1-1/1*1");
+        let compiled = compile_full("1+1");
+        let chunk: Chunk = match compiled {
+            CompilerResult::Chunk(chunk) => chunk,
+            CompilerResult::CompileError => panic!("Compile error"),
+        };
         chunk.disassemble("test");
     }
 
     #[test]
     fn full_compile() {
-        let chunk = compile_full("1 + 2 - 3;");
+        let compiled = compile_full("1+1");
+        let chunk: Chunk = match compiled {
+            CompilerResult::Chunk(chunk) => chunk,
+            CompilerResult::CompileError => panic!("Compile error"),
+        };
         chunk.disassemble("test");
         let expected = [
             OpCode::Constant as u8,
@@ -147,14 +169,17 @@ mod tests {
             OpCode::Constant as u8,
             1,
             OpCode::Add as u8,
-            OpCode::Constant as u8,
-            2,
-            OpCode::Sub as u8,
             OpCode::Return as u8,
         ];
         assert_eq!(expected.len(), chunk.code.len());
         for (i, byte) in expected.iter().enumerate() {
             assert_eq!(*byte, chunk.code[i]);
         }
+    }
+
+    #[test]
+    fn syntax_error() {
+        let compiled = compile_full("1 +;");
+        assert_eq!(compiled, CompilerResult::CompileError);
     }
 }

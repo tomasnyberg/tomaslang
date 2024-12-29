@@ -14,9 +14,16 @@ fn repl() {
         let mut input = String::new();
         std::io::stdin().read_line(&mut input).unwrap();
         let tokens = scanner::scan(&input);
-        let compiled_chunk: Chunk = compiler::compile(&tokens);
-        compiled_chunk.disassemble("test");
-        let mut vm = VM::new(compiled_chunk);
+        let compiler_result = compiler::compile(&tokens);
+        let chunk = match compiler_result {
+            compiler::CompilerResult::CompileError => {
+                println!("Compile error");
+                continue;
+            }
+            compiler::CompilerResult::Chunk(chunk) => chunk,
+        };
+        chunk.disassemble("test");
+        let mut vm = VM::new(chunk);
         vm.run();
     }
 }

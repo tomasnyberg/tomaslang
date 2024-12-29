@@ -1,5 +1,6 @@
 use crate::{compiler::OpCode, vm::Value};
 
+#[derive(Debug, PartialEq)]
 pub struct Chunk {
     pub code: Vec<u8>,
     pub lines: Vec<usize>,
