@@ -1,9 +1,11 @@
 use chunk::Chunk;
 use std::io::{self, Write};
+use vm::VM;
 
 mod chunk;
 mod compiler;
 mod scanner;
+mod vm;
 
 fn repl() {
     loop {
@@ -14,6 +16,8 @@ fn repl() {
         let tokens = scanner::scan(&input);
         let compiled_chunk: Chunk = compiler::compile(&tokens);
         compiled_chunk.disassemble("test");
+        let mut vm = VM::new(compiled_chunk);
+        vm.run();
     }
 }
 

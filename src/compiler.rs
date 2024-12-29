@@ -1,4 +1,4 @@
-use crate::{chunk::*, scanner::*};
+use crate::{chunk::*, scanner::*, vm::Value};
 
 struct Parser {
     tokens: Vec<Token>,
@@ -49,7 +49,7 @@ impl Parser {
             let number = self.tokens[self.current - 1].lexeme.parse::<f64>().unwrap();
             let index: u8 = self.chunk.constants.len() as u8;
             self.emit_bytes(OpCode::Constant as u8, index);
-            self.chunk.constants.push(number);
+            self.chunk.constants.push(Value::Number(number));
             return;
         }
         self.error = true;
@@ -105,14 +105,18 @@ pub fn compile(tokens: &[Token]) -> Chunk {
     parser.chunk
 }
 
+pub fn compile_full(tokens: &str) -> Chunk {
+    let tokens: Vec<Token> = scan(tokens);
+    compile(&tokens)
+}
+
 #[cfg(test)]
 mod tests {
     use crate::compiler::*;
 
     #[test]
     fn basic_expression() {
-        let tokens: Vec<Token> = scan("1+1");
-        let chunk: Chunk = compile(&tokens);
+        let chunk: Chunk = compile_full("1+1");
         let expected = [
             OpCode::Constant as u8,
             0,
@@ -129,8 +133,28 @@ mod tests {
 
     #[test]
     fn can_decompile() {
-        let tokens: Vec<Token> = scan("1+1-1/1*1");
-        let chunk: Chunk = compile(&tokens);
+        let chunk: Chunk = compile_full("1+1-1/1*1");
         chunk.disassemble("test");
+    }
+
+    #[test]
+    fn full_compile() {
+        let chunk = compile_full("1 + 2 - 3;");
+        chunk.disassemble("test");
+        let expected = [
+            OpCode::Constant as u8,
+            0,
+            OpCode::Constant as u8,
+            1,
+            OpCode::Add as u8,
+            OpCode::Constant as u8,
+            2,
+            OpCode::Sub as u8,
+            OpCode::Return as u8,
+        ];
+        assert_eq!(expected.len(), chunk.code.len());
+        for (i, byte) in expected.iter().enumerate() {
+            assert_eq!(*byte, chunk.code[i]);
+        }
     }
 }

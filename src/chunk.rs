@@ -1,9 +1,9 @@
-use crate::compiler::OpCode;
+use crate::{compiler::OpCode, vm::Value};
 
 pub struct Chunk {
     pub code: Vec<u8>,
     pub lines: Vec<usize>,
-    pub constants: Vec<f64>,
+    pub constants: Vec<Value>,
 }
 
 impl Chunk {
@@ -28,7 +28,7 @@ impl Chunk {
         offset + 1
     }
 
-    fn disassemble_instruction(&self, offset: usize) -> usize {
+    pub fn disassemble_instruction(&self, offset: usize) -> usize {
         print!("{:04} ", offset);
         if offset > 0 && self.lines[offset] == self.lines[offset - 1] {
             print!("   | ");
