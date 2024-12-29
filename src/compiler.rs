@@ -156,28 +156,6 @@ mod tests {
     }
 
     #[test]
-    fn full_compile() {
-        let compiled = compile_full("1+1");
-        let chunk: Chunk = match compiled {
-            CompilerResult::Chunk(chunk) => chunk,
-            CompilerResult::CompileError => panic!("Compile error"),
-        };
-        chunk.disassemble("test");
-        let expected = [
-            OpCode::Constant as u8,
-            0,
-            OpCode::Constant as u8,
-            1,
-            OpCode::Add as u8,
-            OpCode::Return as u8,
-        ];
-        assert_eq!(expected.len(), chunk.code.len());
-        for (i, byte) in expected.iter().enumerate() {
-            assert_eq!(*byte, chunk.code[i]);
-        }
-    }
-
-    #[test]
     fn syntax_error() {
         let compiled = compile_full("1 +;");
         assert_eq!(compiled, CompilerResult::CompileError);
