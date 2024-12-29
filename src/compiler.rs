@@ -42,6 +42,18 @@ impl OpCode {
 }
 
 impl Parser {
+    fn error_at_current(&mut self, message: &str) {
+        if self.error {
+            return;
+        }
+        self.error = true;
+        let token = &self.tokens[self.current];
+        eprintln!(
+            "[line {}] Error at '{}': {}",
+            token.line, token.lexeme, message
+        );
+    }
+
     pub fn match_(&mut self, token_type: TokenType) -> bool {
         if self.tokens[self.current].token_type == token_type {
             self.current += 1;
@@ -58,7 +70,7 @@ impl Parser {
             self.chunk.constants.push(Value::Number(number));
             return;
         }
-        self.error = true;
+        self.error_at_current("Expected number");
     }
 
     pub fn advance(&mut self) {
@@ -86,7 +98,7 @@ impl Parser {
             TokenType::Minus => self.emit_byte(OpCode::Sub as u8),
             TokenType::Star => self.emit_byte(OpCode::Mul as u8),
             TokenType::Slash => self.emit_byte(OpCode::Div as u8),
-            _ => (),
+            _ => self.error_at_current("Expected binary operator"),
         }
     }
 
