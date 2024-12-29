@@ -124,17 +124,25 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_very_basic() {
-        let chunk = compile_full("1 + 1");
-        let mut vm = VM {
-            stack: Vec::new(),
-            ip: 0,
-            values: Vec::new(),
-            chunk,
-        };
-        let result = vm.run();
-        assert_eq!(result, VmResult::OK);
-        assert_eq!(vm.stack.len(), 1);
-        assert_eq!(vm.stack[0], Value::Number(2.0));
+    fn test_binary_ops() {
+        for (op, expect) in [
+            ("1 + 1", 2.0),
+            ("1 - 1", 0.0),
+            ("1 * 5", 5.0),
+            ("1 / 2", 0.5),
+        ]
+        .iter()
+        {
+            let compiled = compile_full(op);
+            let chunk: Chunk = match compiled {
+                crate::compiler::CompilerResult::Chunk(chunk) => chunk,
+                crate::compiler::CompilerResult::CompileError => panic!("Compile error"),
+            };
+            let mut vm = VM::new(chunk);
+            let result = vm.run();
+            assert_eq!(result, VmResult::OK);
+            assert_eq!(vm.stack.len(), 1);
+            assert_eq!(vm.stack[0], Value::Number(*expect));
+        }
     }
 }
