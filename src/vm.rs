@@ -102,17 +102,8 @@ impl VM {
                     let value = self.chunk.constants[constant as usize].clone();
                     self.push(value);
                 }
-                OpCode::Add => {
-                    self.binary_op(OpCode::Add);
-                }
-                OpCode::Sub => {
-                    self.binary_op(OpCode::Sub);
-                }
-                OpCode::Mul => {
-                    self.binary_op(OpCode::Mul);
-                }
-                OpCode::Div => {
-                    self.binary_op(OpCode::Div);
+                OpCode::Add | OpCode::Sub | OpCode::Mul | OpCode::Div => {
+                    self.binary_op(instruction);
                 }
                 OpCode::Negate => {
                     let result = Value::Number(-self.pop().as_number());
