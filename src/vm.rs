@@ -124,7 +124,7 @@ pub fn interpret(source: &str) {
     let chunk: Chunk = match compiled {
         crate::compiler::CompilerResult::Chunk(chunk) => chunk,
         crate::compiler::CompilerResult::CompileError => {
-            println!("Compile error");
+            eprintln!("Compile error");
             return;
         }
     };
@@ -133,7 +133,7 @@ pub fn interpret(source: &str) {
     let result = vm.run();
     match result {
         VmResult::OK => (),
-        VmResult::RuntimeError => println!("Runtime error"),
+        VmResult::RuntimeError => eprintln!("Runtime error"),
     }
 }
 

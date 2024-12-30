@@ -1,0 +1,3 @@
+// EXPECT ERR [line 4] Error at '': Expected expression\nCompile error
+// TODO: fix above
+1+;
