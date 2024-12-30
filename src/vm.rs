@@ -109,6 +109,9 @@ impl VM {
                     let result = Value::Number(-self.pop().as_number());
                     self.push(result);
                 }
+                OpCode::Pop => {
+                    self.pop();
+                }
                 OpCode::Return => {
                     return VmResult::OK;
                 }
@@ -125,14 +128,7 @@ mod tests {
 
     #[test]
     fn test_binary_ops() {
-        for (op, expect) in [
-            ("1 + 1", 2.0),
-            ("1 - 1", 0.0),
-            ("1 * 5", 5.0),
-            ("1 / 2", 0.5),
-        ]
-        .iter()
-        {
+        for op in ["1 + 1;", "1 - 1;", "1 * 5;", "1 / 2;"].iter() {
             let compiled = compile(op);
             let chunk: Chunk = match compiled {
                 crate::compiler::CompilerResult::Chunk(chunk) => chunk,
@@ -141,8 +137,7 @@ mod tests {
             let mut vm = VM::new(chunk);
             let result = vm.run();
             assert_eq!(result, VmResult::OK);
-            assert_eq!(vm.stack.len(), 1);
-            assert_eq!(vm.stack[0], Value::Number(*expect));
+            assert_eq!(vm.stack.len(), 0);
         }
     }
 }
