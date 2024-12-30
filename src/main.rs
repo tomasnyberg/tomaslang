@@ -27,6 +27,25 @@ fn repl() {
     }
 }
 
+fn run_program(path: &str) {
+    let source = std::fs::read_to_string(path).unwrap();
+    let compiler_result = compiler::compile(&source);
+    let chunk = match compiler_result {
+        compiler::CompilerResult::CompileError => {
+            println!("Compile error");
+            return;
+        }
+        compiler::CompilerResult::Chunk(chunk) => chunk,
+    };
+    let mut vm = VM::new(chunk);
+    vm.run();
+}
+
 fn main() {
-    repl();
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() == 1 {
+        repl();
+    } else if args.len() == 2 {
+        run_program(&args[1]);
+    }
 }
