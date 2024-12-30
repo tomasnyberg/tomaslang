@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::{chunk::*, scanner::*, vm::Value};
 
 struct Parser {
@@ -5,6 +7,7 @@ struct Parser {
     current: usize,
     error: bool,
     chunk: Chunk,
+    rules: HashMap<TokenType, ParseRule>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -20,10 +23,33 @@ pub enum OpCode {
     Return,
 }
 
+#[derive(Copy, Clone, PartialOrd, PartialEq)]
+enum Precedence {
+    None,
+    Assignment,
+    Or,
+    And,
+    Equality,
+    Comparison,
+    Term,
+    Factor,
+    Unary,
+    Call,
+    Primary,
+}
+
 #[derive(Debug, PartialEq)]
 pub enum CompilerResult {
     Chunk(Chunk),
     CompileError,
+}
+
+type ParseFn = fn(&mut Parser);
+
+struct ParseRule {
+    prefix: Option<ParseFn>,
+    infix: Option<ParseFn>,
+    precedence: Precedence,
 }
 
 impl OpCode {
@@ -42,6 +68,77 @@ impl OpCode {
 }
 
 impl Parser {
+    #[rustfmt::skip]
+    fn create_rules() -> HashMap<TokenType, ParseRule> {
+        let mut rules: HashMap<TokenType, ParseRule> = HashMap::new();
+
+        let mut rule = |token, prefix, infix, precedence| {
+            rules.insert(
+                token,
+                ParseRule {
+                    prefix,
+                    infix,
+                    precedence,
+                },
+            );
+        };
+        use TokenType::*;
+        rule(LeftParen,    None, None, Precedence::Call);
+        rule(RightParen,   None, None, Precedence::None);
+        rule(LeftBrace,    None, None, Precedence::None);
+        rule(RightBrace,   None, None, Precedence::None);
+        rule(Comma,        None, None, Precedence::None);
+        rule(Dot,          None, None, Precedence::None);
+        rule(Minus,        None, None, Precedence::Term);
+        rule(Plus,         None, None, Precedence::Term);
+        rule(Semicolon,    None, None, Precedence::None);
+        rule(Slash,        None, None, Precedence::Factor);
+        rule(Star,         None, None, Precedence::Factor);
+        rule(Bang,         None, None, Precedence::None);
+        rule(BangEqual,    None, None, Precedence::Equality);
+        rule(Equal,        None, None, Precedence::None);
+        rule(EqualEqual,   None, None, Precedence::Equality);
+        rule(Greater,      None, None, Precedence::Comparison);
+        rule(GreaterEqual, None, None, Precedence::Comparison);
+        rule(Less,         None, None, Precedence::Comparison);
+        rule(LessEqual,    None, None, Precedence::Comparison);
+        rule(Identifier,   None, None, Precedence::None);
+        rule(String,       None, None, Precedence::None);
+        rule(Number,       None, None, Precedence::None);
+        rule(And,          None, None, Precedence::And);
+        rule(Class,        None, None, Precedence::None);
+        rule(Else,         None, None, Precedence::None);
+        rule(False,        None, None, Precedence::None);
+        rule(Fun,          None, None, Precedence::None);
+        rule(For,          None, None, Precedence::None);
+        rule(If,           None, None, Precedence::None);
+        rule(Null,         None, None, Precedence::None);
+        rule(Or,           None, None, Precedence::Or);
+        rule(Print,        None, None, Precedence::None);
+        rule(Return,       None, None, Precedence::None);
+        rule(Super,        None, None, Precedence::None);
+        rule(This,         None, None, Precedence::None);
+        rule(True,         None, None, Precedence::None);
+        rule(Var,          None, None, Precedence::None);
+        rule(While,        None, None, Precedence::None);
+        rule(Error,        None, None, Precedence::None);
+        rule(Eof,          None, None, Precedence::None);
+
+        rules
+    }
+
+    pub fn new(input: &str) -> Self {
+        let tokens = scan(input);
+
+        Self {
+            tokens,
+            current: 0,
+            error: false,
+            chunk: Chunk::new(),
+            rules: Self::create_rules(),
+        }
+    }
+
     fn error_at_current(&mut self, message: &str) {
         if self.error {
             return;
@@ -108,14 +205,8 @@ impl Parser {
     }
 }
 
-pub fn compile(tokens: &[Token]) -> CompilerResult {
-    let chunk = Chunk::new();
-    let mut parser = Parser {
-        tokens: tokens.to_vec(),
-        current: 0,
-        error: false,
-        chunk,
-    };
+pub fn compile(input: &str) -> CompilerResult {
+    let mut parser = Parser::new(input);
     while !parser.match_(TokenType::Eof) {
         parser.expression();
     }
@@ -127,18 +218,13 @@ pub fn compile(tokens: &[Token]) -> CompilerResult {
     }
 }
 
-pub fn compile_full(tokens: &str) -> CompilerResult {
-    let tokens: Vec<Token> = scan(tokens);
-    compile(&tokens)
-}
-
 #[cfg(test)]
 mod tests {
     use crate::compiler::*;
 
     #[test]
     fn basic_expression() {
-        let compiled = compile_full("1+1");
+        let compiled = compile("1+1");
         let chunk: Chunk = match compiled {
             CompilerResult::Chunk(chunk) => chunk,
             CompilerResult::CompileError => panic!("Compile error"),
@@ -159,7 +245,7 @@ mod tests {
 
     #[test]
     fn can_decompile() {
-        let compiled = compile_full("1+1");
+        let compiled = compile("1+1");
         let chunk: Chunk = match compiled {
             CompilerResult::Chunk(chunk) => chunk,
             CompilerResult::CompileError => panic!("Compile error"),
@@ -169,7 +255,7 @@ mod tests {
 
     #[test]
     fn syntax_error() {
-        let compiled = compile_full("1 +;");
+        let compiled = compile("1 +;");
         assert_eq!(compiled, CompilerResult::CompileError);
     }
 }

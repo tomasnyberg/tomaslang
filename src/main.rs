@@ -13,8 +13,7 @@ fn repl() {
         io::stdout().flush().unwrap();
         let mut input = String::new();
         std::io::stdin().read_line(&mut input).unwrap();
-        let tokens = scanner::scan(&input);
-        let compiler_result = compiler::compile(&tokens);
+        let compiler_result = compiler::compile(&input);
         let chunk = match compiler_result {
             compiler::CompilerResult::CompileError => {
                 println!("Compile error");

@@ -2,6 +2,7 @@ use std::fmt;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 #[allow(dead_code)]
+#[repr(u8)]
 pub enum TokenType {
     LeftParen,
     RightParen,

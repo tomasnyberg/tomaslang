@@ -119,7 +119,7 @@ impl VM {
 
 #[cfg(test)]
 mod tests {
-    use crate::compiler::compile_full;
+    use crate::compiler::compile;
 
     use super::*;
 
@@ -133,7 +133,7 @@ mod tests {
         ]
         .iter()
         {
-            let compiled = compile_full(op);
+            let compiled = compile(op);
             let chunk: Chunk = match compiled {
                 crate::compiler::CompilerResult::Chunk(chunk) => chunk,
                 crate::compiler::CompilerResult::CompileError => panic!("Compile error"),
