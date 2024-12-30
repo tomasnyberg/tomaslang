@@ -33,14 +33,12 @@ impl fmt::Display for Value {
 #[derive(Debug, Clone, PartialEq)]
 pub enum VmResult {
     OK,
-    CompileError,
     RuntimeError,
 }
 
 pub struct VM {
     stack: Vec<Value>,
     ip: usize,
-    values: Vec<Value>,
     chunk: Chunk,
 }
 
@@ -49,7 +47,6 @@ impl VM {
         Self {
             stack: Vec::new(),
             ip: 0,
-            values: Vec::new(),
             chunk,
         }
     }
@@ -118,6 +115,25 @@ impl VM {
                 }
             }
         }
+    }
+}
+
+pub fn interpret(source: &str) {
+    use crate::compiler::compile;
+    let compiled = compile(source);
+    let chunk: Chunk = match compiled {
+        crate::compiler::CompilerResult::Chunk(chunk) => chunk,
+        crate::compiler::CompilerResult::CompileError => {
+            println!("Compile error");
+            return;
+        }
+    };
+    // TODO: disassemble chunks
+    let mut vm = VM::new(chunk);
+    let result = vm.run();
+    match result {
+        VmResult::OK => (),
+        VmResult::RuntimeError => println!("Runtime error"),
     }
 }
 
