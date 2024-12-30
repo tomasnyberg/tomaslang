@@ -112,6 +112,7 @@ impl VM {
                 OpCode::Pop => {
                     self.pop();
                 }
+                OpCode::Print => println!("{}", self.pop()),
                 OpCode::Return => {
                     return VmResult::OK;
                 }

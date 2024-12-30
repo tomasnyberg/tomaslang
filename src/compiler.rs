@@ -21,6 +21,7 @@ pub enum OpCode {
     Div,
     Negate,
     Pop,
+    Print,
     Return,
 }
 
@@ -82,7 +83,8 @@ impl OpCode {
             4 => OpCode::Div,
             5 => OpCode::Negate,
             6 => OpCode::Pop,
-            7 => OpCode::Return,
+            7 => OpCode::Print,
+            8 => OpCode::Return,
             _ => panic!("unexpected opcode (did you update this match after adding an op?)"),
         }
     }
@@ -233,7 +235,10 @@ impl Parser {
     }
 
     fn print_statement(&mut self) {
-        panic!("Print statement not implemented");
+        self.advance(); // Move over the print token
+        self.expression();
+        self.consume(TokenType::Semicolon, "Expected ';' after value");
+        self.emit_byte(OpCode::Print as u8);
     }
 
     fn for_statement(&mut self) {
