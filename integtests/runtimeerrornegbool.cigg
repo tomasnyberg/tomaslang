@@ -1,0 +1,2 @@
+// EXPECT ERR Expected number at [line 2] in script\nRuntime error
+-true;

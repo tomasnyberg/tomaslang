@@ -10,6 +10,7 @@ pub enum Value {
     //String(String),
 }
 
+#[allow(dead_code)]
 impl Value {
     pub fn as_number(&self) -> f64 {
         match self {
@@ -41,6 +42,7 @@ pub struct VM {
     stack: Vec<Value>,
     ip: usize,
     chunk: Chunk,
+    had_runtime_error: bool,
 }
 
 impl VM {
@@ -49,6 +51,7 @@ impl VM {
             stack: Vec::new(),
             ip: 0,
             chunk,
+            had_runtime_error: false,
         }
     }
 
@@ -80,9 +83,27 @@ impl VM {
         self.chunk.disassemble_instruction(self.ip);
     }
 
+    fn runtime_error(&mut self, message: &str) {
+        eprint!("{}", message);
+        eprintln!(" at [line {}] in script", self.chunk.lines[self.ip - 1]);
+        self.had_runtime_error = true;
+    }
+
     fn binary_op(&mut self, op: OpCode) {
-        let b = self.pop().as_number();
-        let a = self.pop().as_number();
+        let b = match self.pop() {
+            Value::Number(n) => n,
+            _ => {
+                self.runtime_error("Expected number");
+                return;
+            }
+        };
+        let a = match self.pop() {
+            Value::Number(n) => n,
+            _ => {
+                self.runtime_error("Expected number");
+                return;
+            }
+        };
         match op {
             OpCode::Add => self.push(Value::Number(a + b)),
             OpCode::Sub => self.push(Value::Number(a - b)),
@@ -118,11 +139,7 @@ impl VM {
                     match value {
                         Value::Number(n) => self.push(Value::Number(-n)),
                         _ => {
-                            eprintln!(
-                                "Expected number, got {:?} at line {}",
-                                value, self.chunk.lines[self.ip]
-                            );
-                            return VmResult::RuntimeError;
+                            self.runtime_error("Expected number");
                         }
                     }
                 }
@@ -141,6 +158,9 @@ impl VM {
                 OpCode::Return => {
                     return VmResult::OK;
                 }
+            }
+            if self.had_runtime_error {
+                return VmResult::RuntimeError;
             }
         }
     }
