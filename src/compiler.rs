@@ -22,6 +22,9 @@ pub enum OpCode {
     Negate,
     Pop,
     Print,
+    Null,
+    True,
+    False,
     Return,
 }
 
@@ -84,7 +87,10 @@ impl OpCode {
             5 => OpCode::Negate,
             6 => OpCode::Pop,
             7 => OpCode::Print,
-            8 => OpCode::Return,
+            8 => OpCode::Null,
+            9 => OpCode::True,
+            10 => OpCode::False,
+            11 => OpCode::Return,
             _ => panic!("unexpected opcode (did you update this match after adding an op?)"),
         }
     }
@@ -131,17 +137,17 @@ impl Parser {
         rule(And,          None,                  None,               Precedence::And);
         rule(Class,        None,                  None,               Precedence::None);
         rule(Else,         None,                  None,               Precedence::None);
-        rule(False,        None,                  None,               Precedence::None);
+        rule(False,        Some(Self::literal),   None,               Precedence::None);
         rule(Fun,          None,                  None,               Precedence::None);
         rule(For,          None,                  None,               Precedence::None);
         rule(If,           None,                  None,               Precedence::None);
-        rule(Null,         None,                  None,               Precedence::None);
+        rule(Null,         Some(Self::literal),   None,               Precedence::None);
         rule(Or,           None,                  None,               Precedence::Or);
         rule(Print,        None,                  None,               Precedence::None);
         rule(Return,       None,                  None,               Precedence::None);
         rule(Super,        None,                  None,               Precedence::None);
         rule(This,         None,                  None,               Precedence::None);
-        rule(True,         None,                  None,               Precedence::None);
+        rule(True,         Some(Self::literal),   None,               Precedence::None);
         rule(Var,          None,                  None,               Precedence::None);
         rule(While,        None,                  None,               Precedence::None);
         rule(Error,        None,                  None,               Precedence::None);
@@ -188,6 +194,15 @@ impl Parser {
             return true;
         }
         false
+    }
+
+    fn literal(&mut self) {
+        match self.tokens[self.current - 1].token_type {
+            TokenType::Null => self.emit_byte(OpCode::Null as u8),
+            TokenType::True => self.emit_byte(OpCode::True as u8),
+            TokenType::False => self.emit_byte(OpCode::False as u8),
+            _ => self.error_at_current("Expected literal (Null, True, False)"),
+        }
     }
 
     fn unary(&mut self) {
@@ -425,6 +440,22 @@ mod tests {
             OpCode::Constant as u8,
             0,
             OpCode::Negate as u8,
+            OpCode::Pop as u8,
+            OpCode::Return as u8,
+        ];
+        chunk.disassemble("test");
+        match_bytecode(&chunk, &expected);
+    }
+
+    #[test]
+    fn parse_literals() {
+        let chunk: Chunk = compile_to_chunk("true; false; null;");
+        let expected = [
+            OpCode::True as u8,
+            OpCode::Pop as u8,
+            OpCode::False as u8,
+            OpCode::Pop as u8,
+            OpCode::Null as u8,
             OpCode::Pop as u8,
             OpCode::Return as u8,
         ];
