@@ -20,6 +20,7 @@ pub enum OpCode {
     Mul,
     Div,
     Negate,
+    Not,
     Pop,
     Print,
     Null,
@@ -85,12 +86,13 @@ impl OpCode {
             3 => OpCode::Mul,
             4 => OpCode::Div,
             5 => OpCode::Negate,
-            6 => OpCode::Pop,
-            7 => OpCode::Print,
-            8 => OpCode::Null,
-            9 => OpCode::True,
-            10 => OpCode::False,
-            11 => OpCode::Return,
+            6 => OpCode::Not,
+            7 => OpCode::Pop,
+            8 => OpCode::Print,
+            9 => OpCode::Null,
+            10 => OpCode::True,
+            11 => OpCode::False,
+            12 => OpCode::Return,
             _ => panic!("unexpected opcode (did you update this match after adding an op?)"),
         }
     }
@@ -123,7 +125,7 @@ impl Parser {
         rule(Semicolon,    None,                  None,               Precedence::None);
         rule(Slash,        None,                  Some(Self::binary), Precedence::Factor);
         rule(Star,         None,                  Some(Self::binary), Precedence::Factor);
-        rule(Bang,         None,                  None,               Precedence::None);
+        rule(Bang,         Some(Self::unary),     None,               Precedence::None);
         rule(BangEqual,    None,                  None,               Precedence::Equality);
         rule(Equal,        None,                  None,               Precedence::None);
         rule(EqualEqual,   None,                  None,               Precedence::Equality);
@@ -210,6 +212,7 @@ impl Parser {
         self.parse_precedence(Precedence::Unary);
         match operator {
             TokenType::Minus => self.emit_byte(OpCode::Negate as u8),
+            TokenType::Bang => self.emit_byte(OpCode::Not as u8),
             _ => self.error_at_current("Expected unary operator"),
         }
     }

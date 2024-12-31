@@ -80,7 +80,7 @@ impl VM {
         self.chunk.disassemble_instruction(self.ip);
     }
 
-    pub fn binary_op(&mut self, op: OpCode) {
+    fn binary_op(&mut self, op: OpCode) {
         let b = self.pop().as_number();
         let a = self.pop().as_number();
         match op {
@@ -89,6 +89,14 @@ impl VM {
             OpCode::Mul => self.push(Value::Number(a * b)),
             OpCode::Div => self.push(Value::Number(a / b)),
             _ => panic!("Unknown binary op"),
+        }
+    }
+
+    fn is_truthy(&self, value: &Value) -> bool {
+        match value {
+            Value::Bool(b) => *b,
+            Value::Null => false,
+            Value::Number(n) => *n != 0.0,
         }
     }
 
@@ -107,6 +115,11 @@ impl VM {
                 }
                 OpCode::Negate => {
                     let result = Value::Number(-self.pop().as_number());
+                    self.push(result);
+                }
+                OpCode::Not => {
+                    let value = self.pop();
+                    let result = Value::Bool(!self.is_truthy(&value));
                     self.push(result);
                 }
                 OpCode::Pop => {

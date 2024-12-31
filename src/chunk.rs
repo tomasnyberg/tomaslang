@@ -45,6 +45,7 @@ impl Chunk {
             OpCode::Mul => self.simple_instruction("MUL_OP", offset),
             OpCode::Div => self.simple_instruction("DIV_OP", offset),
             OpCode::Negate => self.simple_instruction("NEGATE_OP", offset),
+            OpCode::Not => self.simple_instruction("NOT_OP", offset),
             OpCode::Pop => self.simple_instruction("POP_OP", offset),
             OpCode::Print => self.simple_instruction("PRINT_OP", offset),
             OpCode::Null => self.simple_instruction("NULL_OP", offset),

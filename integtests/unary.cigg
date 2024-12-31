@@ -1,2 +1,5 @@
-// EXPECT -5
+// EXPECT -5\nfalse\ntrue\nfalse
 print -5;
+print !true;
+print !0;
+print !5;
