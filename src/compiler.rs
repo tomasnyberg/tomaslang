@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::{chunk::*, scanner::*, vm::Value};
 
-struct Parser {
+struct Compiler {
     tokens: Vec<Token>,
     current: usize,
     error: bool,
@@ -68,7 +68,7 @@ pub enum CompilerResult {
     CompileError,
 }
 
-type ParseFn = fn(&mut Parser);
+type ParseFn = fn(&mut Compiler);
 
 #[derive(Clone, Copy)]
 struct ParseRule {
@@ -98,7 +98,7 @@ impl OpCode {
     }
 }
 
-impl Parser {
+impl Compiler {
     #[rustfmt::skip]
     fn create_rules() -> HashMap<TokenType, ParseRule> {
         let mut rules: HashMap<TokenType, ParseRule> = HashMap::new();
@@ -344,7 +344,7 @@ impl Parser {
 }
 
 pub fn compile(input: &str) -> CompilerResult {
-    let mut parser = Parser::new(input);
+    let mut parser = Compiler::new(input);
     while !parser.match_(TokenType::Eof) {
         parser.statement();
     }
