@@ -128,7 +128,7 @@ pub fn interpret(source: &str) {
             return;
         }
     };
-    // TODO: disassemble chunks
+    chunk.disassemble("main");
     let mut vm = VM::new(chunk);
     let result = vm.run();
     match result {

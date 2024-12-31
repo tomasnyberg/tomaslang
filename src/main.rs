@@ -1,5 +1,5 @@
 use std::io::{self, Write};
-use vm::{interpret, VM};
+use vm::interpret;
 
 mod chunk;
 mod compiler;

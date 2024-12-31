@@ -1,6 +1,6 @@
 # Run tests (both unit and integration)
 test:
-  cargo test && python3 integration_tests.py
+  cargo build && cargo test && python3 integration_tests.py
 
 # Run unit tests
 test-unit:
@@ -12,7 +12,7 @@ test-integration:
 
 # Run the dev build (with debug info)
 run:
-  cargo run --features debug_trace_execution
+  cargo run --features debug_trace_execution,debug_disassemble
 
 # Run the release build (no debug info)
 run-release:

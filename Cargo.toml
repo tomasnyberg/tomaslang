@@ -7,4 +7,5 @@ edition = "2021"
 
 [features]
 debug_trace_execution = []
+debug_disassemble = []
 

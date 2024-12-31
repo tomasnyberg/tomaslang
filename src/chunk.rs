@@ -52,6 +52,9 @@ impl Chunk {
     }
 
     pub fn disassemble(&self, name: &str) {
+        if !cfg!(feature = "debug_disassemble") {
+            return;
+        }
         println!("===== {} =====", name);
         let mut offset = 0;
         while offset < self.code.len() {
