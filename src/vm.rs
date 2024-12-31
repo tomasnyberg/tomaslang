@@ -69,9 +69,11 @@ impl VM {
         if !cfg!(feature = "debug_trace_execution") {
             return;
         }
-        print!("          ");
-        for slot in &self.stack {
-            print!("[ {} ]", slot);
+        if !self.stack.is_empty() {
+            print!("          ");
+            for slot in &self.stack {
+                print!("[ {} ]", slot);
+            }
         }
         println!();
         self.chunk.disassemble_instruction(self.ip);
