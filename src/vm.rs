@@ -5,16 +5,16 @@ use crate::{chunk::Chunk, compiler::OpCode};
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value {
     Number(f64),
-    Bool(bool),
-    Null,
-    String(String),
+    //Bool(bool),
+    //Null,
+    //String(String),
 }
 
 impl Value {
     pub fn as_number(&self) -> f64 {
         match self {
             Value::Number(n) => *n,
-            _ => panic!("Expected number"),
+            //_ => panic!("Expected number"),
         }
     }
 }
@@ -23,9 +23,9 @@ impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Value::Number(n) => write!(f, "{}", n),
-            Value::Bool(b) => write!(f, "{}", b),
-            Value::Null => write!(f, "null"),
-            Value::String(s) => write!(f, "\"{}\"", s),
+            //Value::Bool(b) => write!(f, "{}", b),
+            //Value::Null => write!(f, "null"),
+            //Value::String(s) => write!(f, "\"{}\"", s),
         }
     }
 }
@@ -33,7 +33,7 @@ impl fmt::Display for Value {
 #[derive(Debug, Clone, PartialEq)]
 pub enum VmResult {
     OK,
-    RuntimeError,
+    //RuntimeError,
 }
 
 pub struct VM {
@@ -135,7 +135,7 @@ pub fn interpret(source: &str) {
     let result = vm.run();
     match result {
         VmResult::OK => (),
-        VmResult::RuntimeError => eprintln!("Runtime error"),
+        //VmResult::RuntimeError => eprintln!("Runtime error"),
     }
 }
 
