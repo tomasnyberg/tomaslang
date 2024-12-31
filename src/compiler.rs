@@ -112,7 +112,7 @@ impl Parser {
         rule(RightBrace,   None,                  None,               Precedence::None);
         rule(Comma,        None,                  None,               Precedence::None);
         rule(Dot,          None,                  None,               Precedence::None);
-        rule(Minus,        None,                  Some(Self::binary), Precedence::Term);
+        rule(Minus,        Some(Self::unary),     Some(Self::binary), Precedence::Term);
         rule(Plus,         None,                  Some(Self::binary), Precedence::Term);
         rule(Semicolon,    None,                  None,               Precedence::None);
         rule(Slash,        None,                  Some(Self::binary), Precedence::Factor);
@@ -188,6 +188,15 @@ impl Parser {
             return true;
         }
         false
+    }
+
+    fn unary(&mut self) {
+        let operator = self.tokens[self.current - 1].token_type;
+        self.parse_precedence(Precedence::Unary);
+        match operator {
+            TokenType::Minus => self.emit_byte(OpCode::Negate as u8),
+            _ => self.error_at_current("Expected unary operator"),
+        }
     }
 
     fn number(&mut self) {
@@ -335,13 +344,17 @@ mod tests {
         }
     }
 
-    #[test]
-    fn basic_expression() {
-        let compiled = compile("1+1;");
-        let chunk: Chunk = match compiled {
+    fn compile_to_chunk(input: &str) -> Chunk {
+        let compiled = compile(input);
+        match compiled {
             CompilerResult::Chunk(chunk) => chunk,
             CompilerResult::CompileError => panic!("Compile error"),
-        };
+        }
+    }
+
+    #[test]
+    fn basic_expression() {
+        let chunk: Chunk = compile_to_chunk("1+1;");
         let expected = [
             OpCode::Constant as u8,
             0,
@@ -357,11 +370,7 @@ mod tests {
 
     #[test]
     fn multiple_exprs() {
-        let compiled = compile("1+1;2+2;");
-        let chunk: Chunk = match compiled {
-            CompilerResult::Chunk(chunk) => chunk,
-            CompilerResult::CompileError => panic!("Compile error"),
-        };
+        let chunk: Chunk = compile_to_chunk("1+1;2+2;");
         let expected = [
             OpCode::Constant as u8,
             0,
@@ -383,11 +392,7 @@ mod tests {
 
     #[test]
     fn muliple_exprs_multiline() {
-        let compiled = compile("1*8;\n7-5;");
-        let chunk: Chunk = match compiled {
-            CompilerResult::Chunk(chunk) => chunk,
-            CompilerResult::CompileError => panic!("Compile error"),
-        };
+        let chunk: Chunk = compile_to_chunk("1*8;\n7-5;");
         let expected = [
             OpCode::Constant as u8,
             0,
@@ -411,5 +416,19 @@ mod tests {
     fn syntax_error() {
         let compiled = compile("1 +;");
         assert_eq!(compiled, CompilerResult::CompileError);
+    }
+
+    #[test]
+    fn unary_negation() {
+        let chunk: Chunk = compile_to_chunk("-1;");
+        let expected = [
+            OpCode::Constant as u8,
+            0,
+            OpCode::Negate as u8,
+            OpCode::Pop as u8,
+            OpCode::Return as u8,
+        ];
+        chunk.disassemble("test");
+        match_bytecode(&chunk, &expected);
     }
 }
