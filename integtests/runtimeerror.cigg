@@ -1,0 +1,2 @@
+// EXPECT ERR Expected number, got Bool(true) at line 2\nRuntime error
+-true;

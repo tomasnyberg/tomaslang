@@ -34,7 +34,7 @@ impl fmt::Display for Value {
 #[derive(Debug, Clone, PartialEq)]
 pub enum VmResult {
     OK,
-    //RuntimeError,
+    RuntimeError,
 }
 
 pub struct VM {
@@ -114,8 +114,17 @@ impl VM {
                     self.binary_op(instruction);
                 }
                 OpCode::Negate => {
-                    let result = Value::Number(-self.pop().as_number());
-                    self.push(result);
+                    let value: Value = self.pop();
+                    match value {
+                        Value::Number(n) => self.push(Value::Number(-n)),
+                        _ => {
+                            eprintln!(
+                                "Expected number, got {:?} at line {}",
+                                value, self.chunk.lines[self.ip]
+                            );
+                            return VmResult::RuntimeError;
+                        }
+                    }
                 }
                 OpCode::Not => {
                     let value = self.pop();
@@ -152,7 +161,7 @@ pub fn interpret(source: &str) {
     let result = vm.run();
     match result {
         VmResult::OK => (),
-        //VmResult::RuntimeError => eprintln!("Runtime error"),
+        VmResult::RuntimeError => eprintln!("Runtime error"),
     }
 }
 
