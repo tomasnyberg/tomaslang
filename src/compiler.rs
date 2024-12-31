@@ -114,7 +114,7 @@ impl Parser {
             );
         };
         use TokenType::*;
-        rule(LeftParen,    None,                  None,               Precedence::Call);
+        rule(LeftParen,    Some(Self::grouping),  None,               Precedence::Call);
         rule(RightParen,   None,                  None,               Precedence::None);
         rule(LeftBrace,    None,                  None,               Precedence::None);
         rule(RightBrace,   None,                  None,               Precedence::None);
@@ -300,6 +300,11 @@ impl Parser {
         self.expression();
         self.consume(TokenType::Semicolon, "Expected ';' after expression");
         self.emit_byte(OpCode::Pop as u8);
+    }
+
+    fn grouping(&mut self) {
+        self.expression();
+        self.consume(TokenType::RightParen, "Expected ')' after expression");
     }
 
     fn parse_precedence(&mut self, precedence: Precedence) {
