@@ -114,7 +114,7 @@ impl Compiler {
             );
         };
         use TokenType::*;
-        rule(LeftParen,    Some(Self::grouping),  None,               Precedence::Call);
+        rule(LeftParen,    Some(Self::grouping),  Some(Self::call),   Precedence::Call);
         rule(RightParen,   None,                  None,               Precedence::None);
         rule(LeftBrace,    None,                  None,               Precedence::None);
         rule(RightBrace,   None,                  None,               Precedence::None);
@@ -196,6 +196,10 @@ impl Compiler {
             return true;
         }
         false
+    }
+
+    fn call(&mut self) {
+        self.error_at_current("Call not implemented");
     }
 
     fn literal(&mut self) {
