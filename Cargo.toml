@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+signal-hook = "0.3.17"
+termios = "0.3.3"
 
 [features]
 debug_trace_execution = []
