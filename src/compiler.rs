@@ -134,7 +134,7 @@ impl Compiler {
         rule(Less,         None,                  None,               Precedence::Comparison);
         rule(LessEqual,    None,                  None,               Precedence::Comparison);
         rule(Identifier,   None,                  None,               Precedence::None);
-        rule(String,       None,                  None,               Precedence::None);
+        rule(String,       Some(Self::string),    None,               Precedence::None);
         rule(Number,       Some(Self::number),    None,               Precedence::None);
         rule(And,          None,                  None,               Precedence::And);
         rule(Class,        None,                  None,               Precedence::None);
@@ -221,12 +221,25 @@ impl Compiler {
         }
     }
 
+    fn emit_constant(&mut self, value: Value) {
+        let index: u8 = self.chunk.constants.len() as u8;
+        self.emit_bytes(OpCode::Constant as u8, index);
+        self.chunk.constants.push(value);
+    }
+
+    fn string(&mut self) {
+        if self.tokens[self.current - 1].token_type == TokenType::String {
+            let string = self.tokens[self.current - 1].lexeme.clone();
+            self.emit_constant(Value::String(string));
+            return;
+        }
+        self.error_at_current("Expected string");
+    }
+
     fn number(&mut self) {
         if self.tokens[self.current - 1].token_type == TokenType::Number {
             let number = self.tokens[self.current - 1].lexeme.parse::<f64>().unwrap();
-            let index: u8 = self.chunk.constants.len() as u8;
-            self.emit_bytes(OpCode::Constant as u8, index);
-            self.chunk.constants.push(Value::Number(number));
+            self.emit_constant(Value::Number(number));
             return;
         }
         self.error_at_current("Expected number");
@@ -468,6 +481,19 @@ mod tests {
             OpCode::False as u8,
             OpCode::Pop as u8,
             OpCode::Null as u8,
+            OpCode::Pop as u8,
+            OpCode::Return as u8,
+        ];
+        chunk.disassemble("test");
+        match_bytecode(&chunk, &expected);
+    }
+
+    #[test]
+    fn parse_string() {
+        let chunk: Chunk = compile_to_chunk("\"hello\";");
+        let expected = [
+            OpCode::Constant as u8,
+            0,
             OpCode::Pop as u8,
             OpCode::Return as u8,
         ];

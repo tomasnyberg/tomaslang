@@ -7,7 +7,7 @@ pub enum Value {
     Number(f64),
     Bool(bool),
     Null,
-    //String(String),
+    String(String),
 }
 
 #[allow(dead_code)]
@@ -27,7 +27,7 @@ impl fmt::Display for Value {
             Value::Number(n) => write!(f, "{}", n),
             Value::Bool(b) => write!(f, "{}", b),
             Value::Null => write!(f, "null"),
-            //Value::String(s) => write!(f, "\"{}\"", s),
+            Value::String(s) => write!(f, "{}", s),
         }
     }
 }
@@ -118,6 +118,7 @@ impl VM {
             Value::Bool(b) => *b,
             Value::Null => false,
             Value::Number(n) => *n != 0.0,
+            Value::String(s) => !s.is_empty(),
         }
     }
 
