@@ -1,0 +1,2 @@
+// EXPECT ERR Cannot divide strings at [line 2] in script\nRuntime error
+"asdlkfjsldf" / 5;

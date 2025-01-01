@@ -19,16 +19,28 @@ impl Value {
             _ => panic!("Expected number"),
         }
     }
+
+    pub fn as_string(&self) -> String {
+        match self {
+            Value::Number(n) => n.to_string(),
+            Value::Bool(b) => b.to_string(),
+            Value::Null => "null".to_string(),
+            Value::String(s) => s.clone(),
+        }
+    }
+
+    pub fn is_string(&self) -> bool {
+        matches!(self, Value::String(_))
+    }
+
+    pub fn is_number(&self) -> bool {
+        matches!(self, Value::Number(_))
+    }
 }
 
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Value::Number(n) => write!(f, "{}", n),
-            Value::Bool(b) => write!(f, "{}", b),
-            Value::Null => write!(f, "null"),
-            Value::String(s) => write!(f, "{}", s),
-        }
+        write!(f, "{}", self.as_string())
     }
 }
 
@@ -90,25 +102,44 @@ impl VM {
     }
 
     fn binary_op(&mut self, op: OpCode) {
-        let b = match self.pop() {
-            Value::Number(n) => n,
-            _ => {
-                self.runtime_error("Expected number");
-                return;
-            }
-        };
-        let a = match self.pop() {
-            Value::Number(n) => n,
-            _ => {
-                self.runtime_error("Expected number");
-                return;
-            }
-        };
+        let b: Value = self.pop();
+        let a: Value = self.pop();
         match op {
-            OpCode::Add => self.push(Value::Number(a + b)),
-            OpCode::Sub => self.push(Value::Number(a - b)),
-            OpCode::Mul => self.push(Value::Number(a * b)),
-            OpCode::Div => self.push(Value::Number(a / b)),
+            OpCode::Add => {
+                if a.is_string() || b.is_string() {
+                    let a = a.as_string();
+                    let b = b.as_string();
+                    self.push(Value::String(format!("{}{}", a, b)));
+                    return;
+                }
+                self.push(Value::Number(a.as_number() + b.as_number()));
+            }
+            OpCode::Sub => {
+                if !a.is_number() || !b.is_number() {
+                    self.runtime_error("Expected numbers to sub operation");
+                    return;
+                }
+                self.push(Value::Number(a.as_number() - b.as_number()));
+            }
+            OpCode::Mul => {
+                if a.is_string() && b.is_number() {
+                    let (a, b) = (a.as_string(), b.as_number());
+                    self.push(Value::String(a.repeat(b as usize)));
+                    return;
+                }
+                if !a.is_number() || !b.is_number() {
+                    self.runtime_error("Bad operators to mul (*)");
+                    return;
+                }
+                self.push(Value::Number(a.as_number() * b.as_number()));
+            }
+            OpCode::Div => {
+                if a.is_string() || b.is_string() {
+                    self.runtime_error("Cannot divide strings");
+                    return;
+                }
+                self.push(Value::Number(a.as_number() / b.as_number()));
+            }
             _ => panic!("Unknown binary op"),
         }
     }

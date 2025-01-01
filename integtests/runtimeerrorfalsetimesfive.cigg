@@ -1,0 +1,2 @@
+// EXPECT ERR Bad operators to mul (*) at [line 2] in script\nRuntime error
+false * 5;

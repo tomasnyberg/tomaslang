@@ -1,0 +1,3 @@
+// EXPECT ERR Expected numbers to sub operation at [line 2] in script\nRuntime error
+"sdlkfjsdf" - "a";
+
