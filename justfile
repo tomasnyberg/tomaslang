@@ -1,6 +1,7 @@
 # Run tests (both unit and integration)
 test:
-  cargo build && cargo test --features debug_disassemble && python3 integration_tests.py && \
+  cargo build && cargo test --features debug_disassemble,debug_trace_execution && \
+  python3 integration_tests.py && \
   cargo build --features debug_trace_execution,debug_disassemble > /dev/null 2>&1 && \
   python3 integration_tests.py --debugintegration
 

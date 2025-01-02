@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{collections::HashMap, fmt};
 
 use crate::{chunk::Chunk, compiler::OpCode};
 
@@ -55,6 +55,7 @@ pub struct VM {
     ip: usize,
     chunk: Chunk,
     had_runtime_error: bool,
+    globals: HashMap<String, Value>,
 }
 
 impl VM {
@@ -64,7 +65,12 @@ impl VM {
             ip: 0,
             chunk,
             had_runtime_error: false,
+            globals: HashMap::new(),
         }
+    }
+
+    fn peek(&self, distance: usize) -> &Value {
+        &self.stack[self.stack.len() - 1 - distance]
     }
 
     fn pop(&mut self) -> Value {
@@ -153,6 +159,15 @@ impl VM {
         }
     }
 
+    fn global_identifier(&mut self) -> String {
+        let name_index = self.read_byte();
+        let name = self.chunk.constants[name_index as usize].clone();
+        if !name.is_string() {
+            self.runtime_error("Expected string for global name");
+        }
+        name.as_string()
+    }
+
     pub fn run(&mut self) -> VmResult {
         loop {
             self.trace_execution();
@@ -184,10 +199,28 @@ impl VM {
                     self.pop();
                 }
                 OpCode::DefineGlobal => {
-                    unimplemented!("DefineGlobal");
+                    let name = self.global_identifier();
+                    let value = self.pop();
+                    self.globals.insert(name, value);
                 }
                 OpCode::GetGlobal => {
-                    unimplemented!("GetGlobal");
+                    let name = self.global_identifier();
+                    match self.globals.get(&name) {
+                        Some(value) => self.push(value.clone()),
+                        None => {
+                            self.runtime_error(&format!("Undefined variable '{}'", name));
+                            return VmResult::RuntimeError;
+                        }
+                    }
+                }
+                OpCode::SetGlobal => {
+                    let name = self.global_identifier();
+                    if !self.globals.contains_key(&name) {
+                        self.runtime_error(&format!("Undefined variable '{}'", name));
+                        return VmResult::RuntimeError;
+                    }
+                    let value = self.peek(0).clone();
+                    self.globals.insert(name, value);
                 }
                 OpCode::Print => println!("{}", self.pop()),
                 OpCode::Null => self.push(Value::Null),
@@ -229,18 +262,43 @@ mod tests {
 
     use super::*;
 
+    fn get_vm(program: &str) -> VM {
+        let compiled = compile(program);
+        let chunk: Chunk = match compiled {
+            crate::compiler::CompilerResult::Chunk(chunk) => chunk,
+            crate::compiler::CompilerResult::CompileError => panic!("Compile error"),
+        };
+        VM::new(chunk)
+    }
+
     #[test]
     fn test_binary_ops() {
         for op in ["1 + 1;", "1 - 1;", "1 * 5;", "1 / 2;"].iter() {
-            let compiled = compile(op);
-            let chunk: Chunk = match compiled {
-                crate::compiler::CompilerResult::Chunk(chunk) => chunk,
-                crate::compiler::CompilerResult::CompileError => panic!("Compile error"),
-            };
-            let mut vm = VM::new(chunk);
+            let mut vm = get_vm(op);
             let result = vm.run();
             assert_eq!(result, VmResult::OK);
             assert_eq!(vm.stack.len(), 0);
         }
+    }
+
+    #[test]
+    fn global_variables() {
+        let program = "global a = 1; print a; a = 5; print a;";
+        let mut vm = get_vm(program);
+        let result = vm.run();
+        assert_eq!(result, VmResult::OK);
+        assert_eq!(vm.stack.len(), 0);
+    }
+
+    #[test]
+    fn global_variables_errors() {
+        let program = "b = 5;";
+        let mut vm = get_vm(program);
+        let result = vm.run();
+        assert_eq!(result, VmResult::RuntimeError);
+        let program = "print b;";
+        let mut vm = get_vm(program);
+        let result = vm.run();
+        assert_eq!(result, VmResult::RuntimeError);
     }
 }

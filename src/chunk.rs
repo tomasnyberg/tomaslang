@@ -46,6 +46,7 @@ impl Chunk {
             OpCode::Div => self.simple_instruction("DIV_OP", offset),
             OpCode::DefineGlobal => self.constant_instruction("DEFINE_GLOBAL_OP", offset),
             OpCode::GetGlobal => self.constant_instruction("GET_GLOBAL_OP", offset),
+            OpCode::SetGlobal => self.constant_instruction("SET_GLOBAL_OP", offset),
             OpCode::Negate => self.simple_instruction("NEGATE_OP", offset),
             OpCode::Not => self.simple_instruction("NOT_OP", offset),
             OpCode::Pop => self.simple_instruction("POP_OP", offset),

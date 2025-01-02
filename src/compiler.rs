@@ -21,6 +21,7 @@ pub enum OpCode {
     Div,
     DefineGlobal,
     GetGlobal,
+    SetGlobal,
     Negate,
     Not,
     Pop,
@@ -89,14 +90,15 @@ impl OpCode {
             4 => OpCode::Div,
             5 => OpCode::DefineGlobal,
             6 => OpCode::GetGlobal,
-            7 => OpCode::Negate,
-            8 => OpCode::Not,
-            9 => OpCode::Pop,
-            10 => OpCode::Print,
-            11 => OpCode::Null,
-            12 => OpCode::True,
-            13 => OpCode::False,
-            14 => OpCode::Return,
+            7 => OpCode::SetGlobal,
+            8 => OpCode::Negate,
+            9 => OpCode::Not,
+            10 => OpCode::Pop,
+            11 => OpCode::Print,
+            12 => OpCode::Null,
+            13 => OpCode::True,
+            14 => OpCode::False,
+            15 => OpCode::Return,
             _ => panic!("unexpected opcode (did you update this match after adding an op?)"),
         }
     }
@@ -137,7 +139,7 @@ impl Compiler {
         rule(GreaterEqual, None,                  None,               Precedence::Comparison);
         rule(Less,         None,                  None,               Precedence::Comparison);
         rule(LessEqual,    None,                  None,               Precedence::Comparison);
-        rule(Identifier,   None,                  None,               Precedence::None);
+        rule(Identifier,   Some(Self::variable),  None,               Precedence::None);
         rule(String,       Some(Self::string),    None,               Precedence::None);
         rule(Number,       Some(Self::number),    None,               Precedence::None);
         rule(And,          None,                  None,               Precedence::And);
@@ -212,6 +214,17 @@ impl Compiler {
             TokenType::True => self.emit_byte(OpCode::True as u8),
             TokenType::False => self.emit_byte(OpCode::False as u8),
             _ => self.error_at_current("Expected literal (Null, True, False)"),
+        }
+    }
+
+    // TODO: Disallow assigning in weird ways e.g a + (b = 1)
+    fn variable(&mut self) {
+        let global = self.identifier_constant();
+        if self.match_(TokenType::Equal) {
+            self.expression();
+            self.emit_bytes(OpCode::SetGlobal as u8, global);
+        } else {
+            self.emit_bytes(OpCode::GetGlobal as u8, global);
         }
     }
 
@@ -363,12 +376,12 @@ impl Compiler {
     fn global_declaration(&mut self) {
         self.consume(TokenType::Identifier, "Expected variable name");
         let global = self.identifier_constant();
-        self.emit_bytes(OpCode::DefineGlobal as u8, global);
         if self.match_(TokenType::Equal) {
             self.expression();
         } else {
             self.emit_byte(OpCode::Null as u8);
         }
+        self.emit_bytes(OpCode::DefineGlobal as u8, global);
         self.consume(
             TokenType::Semicolon,
             "Expected ';' after variable declaration",
@@ -548,13 +561,52 @@ mod tests {
     fn defining_globals() {
         let chunk: Chunk = compile_to_chunk("global a; global b = 1;");
         let expected = [
-            OpCode::DefineGlobal as u8,
-            0, // Points to "a"
             OpCode::Null as u8,
             OpCode::DefineGlobal as u8,
-            1, // Points to "b"
+            0, // Points to "a"
             OpCode::Constant as u8,
             2, // Points to 1
+            OpCode::DefineGlobal as u8,
+            1, // Points to "b"
+            OpCode::Return as u8,
+        ];
+        chunk.disassemble("test");
+        match_bytecode(&chunk, &expected);
+    }
+
+    #[test]
+    fn using_globals() {
+        let chunk: Chunk = compile_to_chunk("global a = 1; print a;");
+        let expected = [
+            OpCode::Constant as u8,
+            1,
+            OpCode::DefineGlobal as u8,
+            0, // Points to "a"
+            OpCode::GetGlobal as u8,
+            2, // Points to "a"
+            OpCode::Print as u8,
+            OpCode::Return as u8,
+        ];
+        chunk.disassemble("test");
+        match_bytecode(&chunk, &expected);
+    }
+
+    #[test]
+    fn setting_globals() {
+        let chunk: Chunk = compile_to_chunk("global a = 1; a = 2; print a;");
+        let expected = [
+            OpCode::Constant as u8,
+            1, // Points to 1
+            OpCode::DefineGlobal as u8,
+            0, // Points to "a"
+            OpCode::Constant as u8,
+            3, // Points to 2
+            OpCode::SetGlobal as u8,
+            2, // Points to "a"
+            OpCode::Pop as u8,
+            OpCode::GetGlobal as u8,
+            4, // Points to "a"
+            OpCode::Print as u8,
             OpCode::Return as u8,
         ];
         chunk.disassemble("test");
