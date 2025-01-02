@@ -16,19 +16,31 @@ const STDIN_FILENO: i32 = 0;
 
 use termios::{tcsetattr, Termios, ECHO, ICANON, TCSANOW};
 
-fn enable_raw_mode() -> Termios {
-    let termios = Termios::from_fd(STDIN_FILENO).unwrap();
-    let mut raw = termios;
-
-    // Disable canonical mode and echo
-    raw.c_lflag &= !(ICANON | ECHO);
-    tcsetattr(STDIN_FILENO, TCSANOW, &raw).unwrap();
-
-    termios
-}
-
 fn disable_raw_mode(original: Termios) {
     tcsetattr(STDIN_FILENO, TCSANOW, &original).unwrap();
+}
+
+struct RawModeGuard {
+    original: Termios,
+}
+
+impl RawModeGuard {
+    fn new() -> io::Result<Self> {
+        let termios = Termios::from_fd(STDIN_FILENO)?;
+        let mut raw = termios;
+
+        // Disable canonical mode and echo
+        raw.c_lflag &= !(ICANON | ECHO);
+        tcsetattr(STDIN_FILENO, TCSANOW, &raw)?;
+
+        Ok(Self { original: termios })
+    }
+}
+
+impl Drop for RawModeGuard {
+    fn drop(&mut self) {
+        disable_raw_mode(self.original);
+    }
 }
 
 fn setup_signals(termios: Termios) {
@@ -96,13 +108,13 @@ fn handle_escape_sequence(
 }
 
 fn repl() {
-    let original_termios = enable_raw_mode();
+    let raw_guard = RawModeGuard::new().expect("Failed to enable raw mode");
     let mut history: Vec<String> = Vec::new();
     let mut line_idx: usize = 0;
     let mut input = String::new();
     let mut cursor_pos = 0;
 
-    setup_signals(original_termios);
+    setup_signals(raw_guard.original);
     loop {
         print_prompt(&input, cursor_pos);
         let mut buffer = [0; 3];
