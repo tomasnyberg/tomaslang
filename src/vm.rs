@@ -183,6 +183,12 @@ impl VM {
                 OpCode::Pop => {
                     self.pop();
                 }
+                OpCode::DefineGlobal => {
+                    unimplemented!("DefineGlobal");
+                }
+                OpCode::GetGlobal => {
+                    unimplemented!("GetGlobal");
+                }
                 OpCode::Print => println!("{}", self.pop()),
                 OpCode::Null => self.push(Value::Null),
                 OpCode::True => self.push(Value::Bool(true)),

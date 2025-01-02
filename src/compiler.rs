@@ -19,6 +19,8 @@ pub enum OpCode {
     Sub,
     Mul,
     Div,
+    DefineGlobal,
+    GetGlobal,
     Negate,
     Not,
     Pop,
@@ -85,14 +87,16 @@ impl OpCode {
             2 => OpCode::Sub,
             3 => OpCode::Mul,
             4 => OpCode::Div,
-            5 => OpCode::Negate,
-            6 => OpCode::Not,
-            7 => OpCode::Pop,
-            8 => OpCode::Print,
-            9 => OpCode::Null,
-            10 => OpCode::True,
-            11 => OpCode::False,
-            12 => OpCode::Return,
+            5 => OpCode::DefineGlobal,
+            6 => OpCode::GetGlobal,
+            7 => OpCode::Negate,
+            8 => OpCode::Not,
+            9 => OpCode::Pop,
+            10 => OpCode::Print,
+            11 => OpCode::Null,
+            12 => OpCode::True,
+            13 => OpCode::False,
+            14 => OpCode::Return,
             _ => panic!("unexpected opcode (did you update this match after adding an op?)"),
         }
     }
@@ -341,7 +345,39 @@ impl Compiler {
         }
     }
 
-    pub fn statement(&mut self) {
+    fn identifier_constant(&mut self) -> u8 {
+        let identifier = self.tokens[self.current - 1].lexeme.clone();
+        let value = Value::String(identifier);
+        self.chunk.constants.push(value.clone());
+        self.chunk.constants.len() as u8 - 1
+    }
+
+    // TODO: Disallow redefining globals
+    fn global_declaration(&mut self) {
+        self.consume(TokenType::Identifier, "Expected variable name");
+        let global = self.identifier_constant();
+        self.emit_bytes(OpCode::DefineGlobal as u8, global);
+        if self.match_(TokenType::Equal) {
+            self.expression();
+        } else {
+            self.emit_byte(OpCode::Null as u8);
+        }
+        self.consume(
+            TokenType::Semicolon,
+            "Expected ';' after variable declaration",
+        );
+    }
+
+    fn declaration(&mut self) {
+        if self.match_(TokenType::Global) {
+            // TODO: disallow this when not at global scope
+            self.global_declaration();
+        } else {
+            self.statement();
+        }
+    }
+
+    fn statement(&mut self) {
         let curr_type = self.tokens[self.current].token_type;
         // TODO: Remember to move past the token (except for in expression)
         match curr_type {
@@ -363,7 +399,7 @@ impl Compiler {
 pub fn compile(input: &str) -> CompilerResult {
     let mut parser = Compiler::new(input);
     while !parser.match_(TokenType::Eof) {
-        parser.statement();
+        parser.declaration();
     }
     parser.emit_byte(OpCode::Return as u8);
     if parser.error {
@@ -495,6 +531,23 @@ mod tests {
             OpCode::Constant as u8,
             0,
             OpCode::Pop as u8,
+            OpCode::Return as u8,
+        ];
+        chunk.disassemble("test");
+        match_bytecode(&chunk, &expected);
+    }
+
+    #[test]
+    fn defining_globals() {
+        let chunk: Chunk = compile_to_chunk("global a; global b = 1;");
+        let expected = [
+            OpCode::DefineGlobal as u8,
+            0, // Points to "a"
+            OpCode::Null as u8,
+            OpCode::DefineGlobal as u8,
+            1, // Points to "b"
+            OpCode::Constant as u8,
+            2, // Points to 1
             OpCode::Return as u8,
         ];
         chunk.disassemble("test");

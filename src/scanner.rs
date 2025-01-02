@@ -36,6 +36,7 @@ pub enum TokenType {
     False,
     Fun,
     For,
+    Global,
     If,
     Null,
     Or,
@@ -178,6 +179,7 @@ impl Scanner {
             "false" => Token::new(TokenType::False, lexeme, self.line),
             "for" => Token::new(TokenType::For, lexeme, self.line),
             "fun" => Token::new(TokenType::Fun, lexeme, self.line),
+            "global" => Token::new(TokenType::Global, lexeme, self.line),
             "if" => Token::new(TokenType::If, lexeme, self.line),
             "null" => Token::new(TokenType::Null, lexeme, self.line),
             "or" => Token::new(TokenType::Or, lexeme, self.line),
@@ -384,5 +386,15 @@ mod tests {
         let tokens: Vec<Token> = super::scan(input);
         assert_eq!(tokens.len(), 2);
         assert_eq!(tokens[0].token_type, super::TokenType::String);
+    }
+
+    #[test]
+    fn parses_global_decls() {
+        let input = "global x = 5;";
+        let tokens: Vec<Token> = super::scan(input);
+        assert_eq!(tokens.len(), 6);
+        assert_eq!(tokens[0].token_type, super::TokenType::Global);
+        assert_eq!(tokens[1].token_type, super::TokenType::Identifier);
+        assert_eq!(tokens[2].token_type, super::TokenType::Equal);
     }
 }
