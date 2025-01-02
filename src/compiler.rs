@@ -226,9 +226,17 @@ impl Compiler {
     }
 
     fn emit_constant(&mut self, value: Value) {
-        let index: u8 = self.chunk.constants.len() as u8;
+        let index = self.make_constant(value);
         self.emit_bytes(OpCode::Constant as u8, index);
+    }
+
+    fn make_constant(&mut self, value: Value) -> u8 {
+        let index: u8 = self.chunk.constants.len() as u8;
         self.chunk.constants.push(value);
+        if self.chunk.constants.len() > 256 {
+            self.error_at_current("Too many constants in one chunk");
+        }
+        index
     }
 
     fn string(&mut self) {
@@ -348,8 +356,7 @@ impl Compiler {
     fn identifier_constant(&mut self) -> u8 {
         let identifier = self.tokens[self.current - 1].lexeme.clone();
         let value = Value::String(identifier);
-        self.chunk.constants.push(value.clone());
-        self.chunk.constants.len() as u8 - 1
+        self.make_constant(value)
     }
 
     // TODO: Disallow redefining globals
