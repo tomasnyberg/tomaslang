@@ -1,16 +1,13 @@
+use chunk::Chunk;
 use signal_hook::consts::{SIGHUP, SIGINT, SIGPIPE, SIGQUIT, SIGTERM, SIGTSTP};
 use signal_hook::iterator::Signals;
 use std::io::{self, Read, Write};
-use vm::interpret;
+use vm::{interpret, VM};
 
 mod chunk;
 mod compiler;
 mod scanner;
 mod vm;
-
-fn run_program(source: &str) {
-    interpret(source);
-}
 
 const STDIN_FILENO: i32 = 0;
 
@@ -113,6 +110,7 @@ fn repl() {
     let mut line_idx: usize = 0;
     let mut input = String::new();
     let mut cursor_pos = 0;
+    let mut vm = VM::new(Chunk::new());
 
     setup_signals(raw_guard.original);
     loop {
@@ -126,7 +124,7 @@ fn repl() {
                         history.push(input.clone());
                     }
                     line_idx = history.len();
-                    run_program(&input);
+                    interpret(&input, &mut vm);
                     input.clear();
                     cursor_pos = 0;
                     break;
@@ -158,7 +156,7 @@ fn repl() {
 
 fn run_file(path: &str) {
     let source = std::fs::read_to_string(path).unwrap();
-    run_program(&source);
+    interpret(&source, &mut VM::new(Chunk::new()));
 }
 
 fn main() {

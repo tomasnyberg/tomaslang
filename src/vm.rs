@@ -69,6 +69,12 @@ impl VM {
         }
     }
 
+    pub fn load_chunk(&mut self, chunk: Chunk) {
+        self.chunk = chunk;
+        self.ip = 0;
+        self.stack.clear();
+    }
+
     fn peek(&self, distance: usize) -> &Value {
         &self.stack[self.stack.len() - 1 - distance]
     }
@@ -237,7 +243,7 @@ impl VM {
     }
 }
 
-pub fn interpret(source: &str) {
+pub fn interpret(source: &str, vm: &mut VM) {
     use crate::compiler::compile;
     let compiled = compile(source);
     let chunk: Chunk = match compiled {
@@ -248,7 +254,7 @@ pub fn interpret(source: &str) {
         }
     };
     chunk.disassemble("main");
-    let mut vm = VM::new(chunk);
+    vm.load_chunk(chunk);
     let result = vm.run();
     match result {
         VmResult::OK => (),
