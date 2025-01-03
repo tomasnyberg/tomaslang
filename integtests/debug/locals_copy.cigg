@@ -1,0 +1,180 @@
+/*
+// EXPECT MULTI
+===== main =====
+0000  153 CONSTANT_OP         0 'Number(5.0)'
+0002  154 CONSTANT_OP         1 'Number(100.0)'
+0004    | SET_LOCAL_OP        0
+0006    | POP_OP
+0007  155 GET_LOCAL_OP        0
+0009    | PRINT_OP
+0010  156 CONSTANT_OP         2 'Number(5.0)'
+0012    | NEGATE_OP
+0013  157 GET_LOCAL_OP        1
+0015    | SET_LOCAL_OP        0
+0017    | POP_OP
+0018  158 GET_LOCAL_OP        0
+0020    | PRINT_OP
+0021  159 GET_LOCAL_OP        1
+0023    | GET_LOCAL_OP        0
+0025    | MUL_OP
+0026    | PRINT_OP
+0027  160 CONSTANT_OP         4 'Number(10.0)'
+0029    | NEGATE_OP
+0030    | DEFINE_GLOBAL_OP    3 'String("c")'
+0032  161 GET_LOCAL_OP        0
+0034    | GET_LOCAL_OP        1
+0036    | MUL_OP
+0037    | GET_GLOBAL_OP       5 'String("c")'
+0039    | MUL_OP
+0040    | PRINT_OP
+0041  163 CONSTANT_OP         6 'Number(50.0)'
+0043  164 GET_LOCAL_OP        2
+0045    | PRINT_OP
+0046  166 GET_LOCAL_OP        2
+0048    | PRINT_OP
+0049  168 CONSTANT_OP         7 'Number(1.0)'
+0051    | SET_LOCAL_OP        2
+0053    | POP_OP
+0054  170 GET_LOCAL_OP        2
+0056    | PRINT_OP
+0057  172 CONSTANT_OP         8 'Number(100.0)'
+0059  173 POP_OP
+0060  174 GET_LOCAL_OP        2
+0062    | PRINT_OP
+0063  176 CONSTANT_OP         9 'Number(100.0)'
+0065  177 GET_LOCAL_OP        3
+0067    | PRINT_OP
+0068  178 POP_OP
+0069  180 POP_OP
+0070  181 RETURN_OP
+
+0000  153 CONSTANT_OP         0 'Number(5.0)'
+          [ 5 ]
+0002  154 CONSTANT_OP         1 'Number(100.0)'
+          [ 5 ][ 100 ]
+0004    | SET_LOCAL_OP        0
+          [ 100 ][ 100 ]
+0006    | POP_OP
+          [ 100 ]
+0007  155 GET_LOCAL_OP        0
+          [ 100 ][ 100 ]
+0009    | PRINT_OP
+100
+          [ 100 ]
+0010  156 CONSTANT_OP         2 'Number(5.0)'
+          [ 100 ][ 5 ]
+0012    | NEGATE_OP
+          [ 100 ][ -5 ]
+0013  157 GET_LOCAL_OP        1
+          [ 100 ][ -5 ][ -5 ]
+0015    | SET_LOCAL_OP        0
+          [ -5 ][ -5 ][ -5 ]
+0017    | POP_OP
+          [ -5 ][ -5 ]
+0018  158 GET_LOCAL_OP        0
+          [ -5 ][ -5 ][ -5 ]
+0020    | PRINT_OP
+-5
+          [ -5 ][ -5 ]
+0021  159 GET_LOCAL_OP        1
+          [ -5 ][ -5 ][ -5 ]
+0023    | GET_LOCAL_OP        0
+          [ -5 ][ -5 ][ -5 ][ -5 ]
+0025    | MUL_OP
+          [ -5 ][ -5 ][ 25 ]
+0026    | PRINT_OP
+25
+          [ -5 ][ -5 ]
+0027  160 CONSTANT_OP         4 'Number(10.0)'
+          [ -5 ][ -5 ][ 10 ]
+0029    | NEGATE_OP
+          [ -5 ][ -5 ][ -10 ]
+0030    | DEFINE_GLOBAL_OP    3 'String("c")'
+          [ -5 ][ -5 ]
+0032  161 GET_LOCAL_OP        0
+          [ -5 ][ -5 ][ -5 ]
+0034    | GET_LOCAL_OP        1
+          [ -5 ][ -5 ][ -5 ][ -5 ]
+0036    | MUL_OP
+          [ -5 ][ -5 ][ 25 ]
+0037    | GET_GLOBAL_OP       5 'String("c")'
+          [ -5 ][ -5 ][ 25 ][ -10 ]
+0039    | MUL_OP
+          [ -5 ][ -5 ][ -250 ]
+0040    | PRINT_OP
+-250
+          [ -5 ][ -5 ]
+0041  163 CONSTANT_OP         6 'Number(50.0)'
+          [ -5 ][ -5 ][ 50 ]
+0043  164 GET_LOCAL_OP        2
+          [ -5 ][ -5 ][ 50 ][ 50 ]
+0045    | PRINT_OP
+50
+          [ -5 ][ -5 ][ 50 ]
+0046  166 GET_LOCAL_OP        2
+          [ -5 ][ -5 ][ 50 ][ 50 ]
+0048    | PRINT_OP
+50
+          [ -5 ][ -5 ][ 50 ]
+0049  168 CONSTANT_OP         7 'Number(1.0)'
+          [ -5 ][ -5 ][ 50 ][ 1 ]
+0051    | SET_LOCAL_OP        2
+          [ -5 ][ -5 ][ 1 ][ 1 ]
+0053    | POP_OP
+          [ -5 ][ -5 ][ 1 ]
+0054  170 GET_LOCAL_OP        2
+          [ -5 ][ -5 ][ 1 ][ 1 ]
+0056    | PRINT_OP
+1
+          [ -5 ][ -5 ][ 1 ]
+0057  172 CONSTANT_OP         8 'Number(100.0)'
+          [ -5 ][ -5 ][ 1 ][ 100 ]
+0059  173 POP_OP
+          [ -5 ][ -5 ][ 1 ]
+0060  174 GET_LOCAL_OP        2
+          [ -5 ][ -5 ][ 1 ][ 1 ]
+0062    | PRINT_OP
+1
+          [ -5 ][ -5 ][ 1 ]
+0063  176 CONSTANT_OP         9 'Number(100.0)'
+          [ -5 ][ -5 ][ 1 ][ 100 ]
+0065  177 GET_LOCAL_OP        3
+          [ -5 ][ -5 ][ 1 ][ 100 ][ 100 ]
+0067    | PRINT_OP
+100
+          [ -5 ][ -5 ][ 1 ][ 100 ]
+0068  178 POP_OP
+          [ -5 ][ -5 ][ 1 ]
+0069  180 POP_OP
+          [ -5 ][ -5 ]
+0070  181 RETURN_OP
+// EXPECT MULTI END
+*/
+let a = 5;
+a = 100;
+print a; // expect 100
+let b = -5;
+a = b;
+print a; // expect -5
+print b*a; // expect -5*-5 = 25
+global c = -10;
+print a*b*c; // expect -250
+{
+    let a = 50;
+    print a;
+    {
+        print a;
+        {
+            a = 1;
+        }
+        print a;
+        {
+            let a = 100;
+        }
+        print a;
+        {
+            let a = 100;
+            print a;
+        }
+    }
+}
