@@ -20,3 +20,9 @@ run:
 # Run the release build (no debug info)
 run-release:
   cargo run --release
+
+runfile filename:
+  cargo run --features debug_trace_execution,debug_disassemble -- {{filename}}
+
+runfile-release filename:
+  cargo run --release -- {{filename}}
