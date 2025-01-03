@@ -15,6 +15,7 @@ struct Compiler {
 struct Local {
     name: Token,
     depth: i32,
+    constant: bool,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -259,6 +260,9 @@ impl Compiler {
             get_op = OpCode::GetGlobal;
         }
         if self.match_(TokenType::Equal) {
+            if resolved.is_some() && self.locals[arg as usize].constant {
+                self.error_at_current("Cannot assign to constant variable");
+            }
             self.expression();
             self.emit_bytes(set_op as u8, arg);
         } else {
@@ -438,7 +442,7 @@ impl Compiler {
         );
     }
 
-    fn local_var_declaration(&mut self) {
+    fn local_var_declaration(&mut self, constant: bool) {
         self.consume(TokenType::Identifier, "Expected variable name");
         let name = self.tokens[self.current - 1].clone();
         for local in self.locals.iter().rev() {
@@ -457,11 +461,17 @@ impl Compiler {
         self.locals.push(Local {
             name,
             depth: -1, // Maybe -1 to avoid let a = a?
+            constant,
         });
 
         if self.match_(TokenType::Equal) {
             self.expression();
         } else {
+            if constant {
+                self.error_at_current(
+                    "Expected '=' after constant declaration (must be initialized)",
+                );
+            }
             self.emit_byte(OpCode::Null as u8);
         }
         self.locals.last_mut().unwrap().depth = self.scope_depth as i32;
@@ -475,8 +485,9 @@ impl Compiler {
         if self.match_(TokenType::Global) {
             // TODO: disallow this when not at global scope
             self.global_declaration();
-        } else if self.match_(TokenType::Let) {
-            self.local_var_declaration();
+        } else if self.match_(TokenType::Let) || self.match_(TokenType::Const) {
+            let constant = self.tokens[self.current - 1].token_type == TokenType::Const;
+            self.local_var_declaration(constant);
         } else {
             self.statement();
         }
@@ -732,5 +743,28 @@ mod tests {
         ];
         chunk.disassemble("test");
         match_bytecode(&chunk, &expected);
+    }
+
+    #[test]
+    fn good_constant() {
+        let chunk: Chunk = compile_to_chunk("const a = 100; print a;");
+        let expected = [
+            OpCode::Constant as u8,
+            0, // Points to 100
+            OpCode::GetLocal as u8,
+            0, // Points to "a"
+            OpCode::Print as u8,
+            OpCode::Return as u8,
+        ];
+        chunk.disassemble("test");
+        match_bytecode(&chunk, &expected);
+    }
+
+    #[test]
+    fn bad_constant() {
+        let compiled = compile("const a; print a;");
+        assert_eq!(compiled, CompilerResult::CompileError);
+        let compiled = compile("const a = 100; a = 200;");
+        assert_eq!(compiled, CompilerResult::CompileError);
     }
 }

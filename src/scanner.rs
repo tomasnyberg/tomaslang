@@ -46,6 +46,7 @@ pub enum TokenType {
     This,
     True,
     Let,
+    Const,
     While,
 
     Error,
@@ -189,6 +190,7 @@ impl Scanner {
             "this" => Token::new(TokenType::This, lexeme, self.line),
             "true" => Token::new(TokenType::True, lexeme, self.line),
             "let" => Token::new(TokenType::Let, lexeme, self.line),
+            "const" => Token::new(TokenType::Const, lexeme, self.line),
             "while" => Token::new(TokenType::While, lexeme, self.line),
             _ => Token::new(TokenType::Identifier, lexeme, self.line),
         }
