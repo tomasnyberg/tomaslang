@@ -45,7 +45,7 @@ pub enum TokenType {
     Super,
     This,
     True,
-    Var,
+    Let,
     While,
 
     Error,
@@ -188,7 +188,7 @@ impl Scanner {
             "super" => Token::new(TokenType::Super, lexeme, self.line),
             "this" => Token::new(TokenType::This, lexeme, self.line),
             "true" => Token::new(TokenType::True, lexeme, self.line),
-            "var" => Token::new(TokenType::Var, lexeme, self.line),
+            "let" => Token::new(TokenType::Let, lexeme, self.line),
             "while" => Token::new(TokenType::While, lexeme, self.line),
             _ => Token::new(TokenType::Identifier, lexeme, self.line),
         }

@@ -228,6 +228,16 @@ impl VM {
                     let value = self.peek(0).clone();
                     self.globals.insert(name, value);
                 }
+                OpCode::GetLocal => {
+                    let position = self.read_byte();
+                    let value = self.stack[position as usize].clone();
+                    self.push(value);
+                }
+                OpCode::SetLocal => {
+                    let position = self.read_byte();
+                    let value = self.peek(0).clone();
+                    self.stack[position as usize] = value;
+                }
                 OpCode::Print => println!("{}", self.pop()),
                 OpCode::Null => self.push(Value::Null),
                 OpCode::True => self.push(Value::Bool(true)),
@@ -306,5 +316,13 @@ mod tests {
         let mut vm = get_vm(program);
         let result = vm.run();
         assert_eq!(result, VmResult::RuntimeError);
+    }
+
+    #[test]
+    fn block_scoped() {
+        let program = "let a = 1; { let a = 5; print a; }";
+        let mut vm = get_vm(program);
+        let result = vm.run();
+        assert_eq!(result, VmResult::OK);
     }
 }

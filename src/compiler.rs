@@ -8,6 +8,13 @@ struct Compiler {
     error: bool,
     chunk: Chunk,
     rules: HashMap<TokenType, ParseRule>,
+    locals: Vec<Local>,
+    scope_depth: usize,
+}
+
+struct Local {
+    name: Token,
+    depth: i32,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -22,6 +29,8 @@ pub enum OpCode {
     DefineGlobal,
     GetGlobal,
     SetGlobal,
+    GetLocal,
+    SetLocal,
     Negate,
     Not,
     Pop,
@@ -91,14 +100,16 @@ impl OpCode {
             5 => OpCode::DefineGlobal,
             6 => OpCode::GetGlobal,
             7 => OpCode::SetGlobal,
-            8 => OpCode::Negate,
-            9 => OpCode::Not,
-            10 => OpCode::Pop,
-            11 => OpCode::Print,
-            12 => OpCode::Null,
-            13 => OpCode::True,
-            14 => OpCode::False,
-            15 => OpCode::Return,
+            8 => OpCode::GetLocal,
+            9 => OpCode::SetLocal,
+            10 => OpCode::Negate,
+            11 => OpCode::Not,
+            12 => OpCode::Pop,
+            13 => OpCode::Print,
+            14 => OpCode::Null,
+            15 => OpCode::True,
+            16 => OpCode::False,
+            17 => OpCode::Return,
             _ => panic!("unexpected opcode (did you update this match after adding an op?)"),
         }
     }
@@ -156,7 +167,7 @@ impl Compiler {
         rule(Super,        None,                  None,               Precedence::None);
         rule(This,         None,                  None,               Precedence::None);
         rule(True,         Some(Self::literal),   None,               Precedence::None);
-        rule(Var,          None,                  None,               Precedence::None);
+        rule(Let,          None,                  None,               Precedence::None);
         rule(While,        None,                  None,               Precedence::None);
         rule(Error,        None,                  None,               Precedence::None);
         rule(Eof,          None,                  None,               Precedence::None);
@@ -173,6 +184,8 @@ impl Compiler {
             error: false,
             chunk: Chunk::new(),
             rules: Self::create_rules(),
+            locals: Vec::new(),
+            scope_depth: 0,
         }
     }
 
@@ -217,14 +230,39 @@ impl Compiler {
         }
     }
 
+    fn resolve_local(&mut self, name: &Token) -> Option<u8> {
+        for (i, local) in self.locals.iter().enumerate().rev() {
+            if name.lexeme == local.name.lexeme {
+                if local.depth == -1 {
+                    self.error_at_current("Cannot read local variable in its own initializer");
+                }
+                return Some(i as u8);
+            }
+        }
+        None
+    }
+
     // TODO: Disallow assigning in weird ways e.g a + (b = 1)
     fn variable(&mut self) {
-        let global = self.identifier_constant();
+        let var_token = self.tokens[self.current - 1].clone();
+        let set_op: OpCode;
+        let get_op: OpCode;
+        let arg: u8;
+        let resolved = self.resolve_local(&var_token);
+        if resolved.is_some() {
+            arg = resolved.unwrap();
+            set_op = OpCode::SetLocal;
+            get_op = OpCode::GetLocal;
+        } else {
+            arg = self.identifier_constant();
+            set_op = OpCode::SetGlobal;
+            get_op = OpCode::GetGlobal;
+        }
         if self.match_(TokenType::Equal) {
             self.expression();
-            self.emit_bytes(OpCode::SetGlobal as u8, global);
+            self.emit_bytes(set_op as u8, arg);
         } else {
-            self.emit_bytes(OpCode::GetGlobal as u8, global);
+            self.emit_bytes(get_op as u8, arg);
         }
     }
 
@@ -327,15 +365,27 @@ impl Compiler {
     }
 
     fn begin_scope(&mut self) {
-        panic!("Begin scope not implemented");
+        self.consume(TokenType::LeftBrace, "Expected '{' to start block");
+        self.scope_depth += 1;
     }
 
     fn end_scope(&mut self) {
-        panic!("End scope not implemented");
+        self.scope_depth -= 1;
+        while !self.locals.is_empty() && self.locals.last().unwrap().depth > self.scope_depth as i32
+        {
+            self.emit_byte(OpCode::Pop as u8);
+            self.locals.pop();
+        }
     }
 
     fn block(&mut self) {
-        panic!("Block not implemented");
+        while !self.match_(TokenType::RightBrace) {
+            if self.match_(TokenType::Eof) {
+                self.error_at_current("Expected '}' to end block");
+                return;
+            }
+            self.declaration();
+        }
     }
 
     fn expression_statement(&mut self) {
@@ -388,10 +438,45 @@ impl Compiler {
         );
     }
 
+    fn local_var_declaration(&mut self) {
+        self.consume(TokenType::Identifier, "Expected variable name");
+        let name = self.tokens[self.current - 1].clone();
+        for local in self.locals.iter().rev() {
+            if local.depth != self.scope_depth as i32 {
+                break;
+            }
+            if name.lexeme == local.name.lexeme {
+                self.error_at_current("Variable with this name already declared in this scope");
+                break;
+            }
+        }
+        if self.locals.len() == 256 {
+            self.error_at_current("Too many local variables :(");
+            return;
+        }
+        self.locals.push(Local {
+            name,
+            depth: -1, // Maybe -1 to avoid let a = a?
+        });
+
+        if self.match_(TokenType::Equal) {
+            self.expression();
+        } else {
+            self.emit_byte(OpCode::Null as u8);
+        }
+        self.locals.last_mut().unwrap().depth = self.scope_depth as i32;
+        self.consume(
+            TokenType::Semicolon,
+            "Expected ';' after variable declaration",
+        );
+    }
+
     fn declaration(&mut self) {
         if self.match_(TokenType::Global) {
             // TODO: disallow this when not at global scope
             self.global_declaration();
+        } else if self.match_(TokenType::Let) {
+            self.local_var_declaration();
         } else {
             self.statement();
         }
@@ -607,6 +692,42 @@ mod tests {
             OpCode::GetGlobal as u8,
             4, // Points to "a"
             OpCode::Print as u8,
+            OpCode::Return as u8,
+        ];
+        chunk.disassemble("test");
+        match_bytecode(&chunk, &expected);
+    }
+
+    #[test]
+    fn declaring_locals() {
+        let chunk: Chunk = compile_to_chunk("let a = 5; print a;");
+        let expected = [
+            OpCode::Constant as u8,
+            // Points to 5, this is actually the variable a. it just lives here.
+            // quote: The temporary (value) simply _becomes_ the local variable.
+            // That position on the stack IS the local variable.
+            0,
+            OpCode::GetLocal as u8,
+            0, // Points to "a"
+            OpCode::Print as u8,
+            OpCode::Return as u8,
+        ];
+        chunk.disassemble("test");
+        match_bytecode(&chunk, &expected);
+    }
+
+    #[test]
+    fn redeclaring_local() {
+        let chunk: Chunk = compile_to_chunk("let a = 100; {let a = 10; print a;}");
+        let expected = [
+            OpCode::Constant as u8,
+            0, // outer a
+            OpCode::Constant as u8,
+            1, // Inner a
+            OpCode::GetLocal as u8,
+            1, // inner a should be printed
+            OpCode::Print as u8,
+            OpCode::Pop as u8, // End the scope
             OpCode::Return as u8,
         ];
         chunk.disassemble("test");

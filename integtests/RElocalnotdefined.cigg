@@ -1,0 +1,7 @@
+// EXPECT ERR [line 4] Error at ';': Cannot read local variable in its own initializer\nCompile error
+let a = 100;
+{
+    let a = a;
+    print a;
+}
+

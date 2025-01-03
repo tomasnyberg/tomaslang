@@ -29,6 +29,12 @@ impl Chunk {
         offset + 1
     }
 
+    fn byte_instruction(&self, name: &str, offset: usize) -> usize {
+        let slot = self.code[offset + 1];
+        println!("{:16} {:4}", name, slot);
+        offset + 2
+    }
+
     pub fn disassemble_instruction(&self, offset: usize) -> usize {
         print!("{:04} ", offset);
         if offset > 0 && self.lines[offset] == self.lines[offset - 1] {
@@ -47,6 +53,8 @@ impl Chunk {
             OpCode::DefineGlobal => self.constant_instruction("DEFINE_GLOBAL_OP", offset),
             OpCode::GetGlobal => self.constant_instruction("GET_GLOBAL_OP", offset),
             OpCode::SetGlobal => self.constant_instruction("SET_GLOBAL_OP", offset),
+            OpCode::GetLocal => self.byte_instruction("GET_LOCAL_OP", offset),
+            OpCode::SetLocal => self.byte_instruction("SET_LOCAL_OP", offset),
             OpCode::Negate => self.simple_instruction("NEGATE_OP", offset),
             OpCode::Not => self.simple_instruction("NOT_OP", offset),
             OpCode::Pop => self.simple_instruction("POP_OP", offset),
