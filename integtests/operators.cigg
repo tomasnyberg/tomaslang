@@ -1,0 +1,15 @@
+// EXPECT true\ntrue\ntrue\ntrue\ntrue\ntrue\nfalse\ntrue\nfalse\ntrue
+
+print 5 <= 10;
+print 5 <= 5;
+print "abc" < "bcd";
+print "abc" <= "bcd";
+print "abc" == "abc";
+let a = 10;
+let b = a;
+print a >= b;
+print a > b;
+print a == b;
+print a != b;
+a = 15;
+print a != b;

@@ -438,4 +438,23 @@ mod tests {
             assert_eq!(token.token_type, expected[i]);
         }
     }
+
+    #[test]
+    fn parses_comparison_ops() {
+        let input = "<= >= == != < >";
+        let tokens: Vec<Token> = super::scan(input);
+        let expected = [
+            TokenType::LessEqual,
+            TokenType::GreaterEqual,
+            TokenType::EqualEqual,
+            TokenType::BangEqual,
+            TokenType::Less,
+            TokenType::Greater,
+            TokenType::Eof,
+        ];
+        assert_eq!(tokens.len(), expected.len());
+        for (i, token) in tokens.iter().enumerate() {
+            assert_eq!(token.token_type, expected[i]);
+        }
+    }
 }

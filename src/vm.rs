@@ -158,6 +158,34 @@ impl VM {
                 }
                 self.push(Value::Number(a.as_number() / b.as_number()));
             }
+            OpCode::Equal => self.push(Value::Bool(a == b)),
+            OpCode::NotEqual => self.push(Value::Bool(a != b)),
+            OpCode::Greater => {
+                if a.is_string() && b.is_string() {
+                    self.push(Value::Bool(a.as_string() > b.as_string()));
+                    return;
+                }
+                if a.is_number() && b.is_number() {
+                    self.push(Value::Bool(a.as_number() > b.as_number()));
+                    return;
+                }
+                self.runtime_error(
+                    "Values in comparison are not comparable (not two strings nor two numbers",
+                );
+            }
+            OpCode::GreaterEqual => {
+                if a.is_string() && b.is_string() {
+                    self.push(Value::Bool(a.as_string() >= b.as_string()));
+                    return;
+                }
+                if a.is_number() && b.is_number() {
+                    self.push(Value::Bool(a.as_number() >= b.as_number()));
+                    return;
+                }
+                self.runtime_error(
+                    "Values in comparison are not comparable (not two strings nor two numbers",
+                );
+            }
             _ => panic!("Unknown binary op"),
         }
     }
@@ -190,7 +218,14 @@ impl VM {
                     let value = self.chunk.constants[constant as usize].clone();
                     self.push(value);
                 }
-                OpCode::Add | OpCode::Sub | OpCode::Mul | OpCode::Div => {
+                OpCode::Add
+                | OpCode::Sub
+                | OpCode::Mul
+                | OpCode::Div
+                | OpCode::Equal
+                | OpCode::NotEqual
+                | OpCode::Greater
+                | OpCode::GreaterEqual => {
                     self.binary_op(instruction);
                 }
                 OpCode::Negate => {
@@ -346,5 +381,25 @@ mod tests {
         let mut vm = get_vm(program);
         let result = vm.run();
         assert_eq!(result, VmResult::OK);
+    }
+
+    #[test]
+    fn comparison_operators() {
+        let program = "1 > 2; 1 >= 2; 1 == 1; 1 != 2;";
+        let mut vm = get_vm(program);
+        let result = vm.run();
+        assert_eq!(result, VmResult::OK);
+    }
+
+    #[test]
+    fn comparison_operators_bad() {
+        let program = "1 > \"2\";";
+        let mut vm = get_vm(program);
+        let result = vm.run();
+        assert_eq!(result, VmResult::RuntimeError);
+        let program = "\"hej\" >= 5;";
+        let mut vm = get_vm(program);
+        let result = vm.run();
+        assert_eq!(result, VmResult::RuntimeError);
     }
 }

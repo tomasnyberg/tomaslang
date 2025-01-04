@@ -27,6 +27,10 @@ pub enum OpCode {
     Sub,
     Mul,
     Div,
+    Equal,
+    NotEqual,
+    Greater,
+    GreaterEqual,
     DefineGlobal,
     GetGlobal,
     SetGlobal,
@@ -101,22 +105,26 @@ impl OpCode {
             2 => OpCode::Sub,
             3 => OpCode::Mul,
             4 => OpCode::Div,
-            5 => OpCode::DefineGlobal,
-            6 => OpCode::GetGlobal,
-            7 => OpCode::SetGlobal,
-            8 => OpCode::GetLocal,
-            9 => OpCode::SetLocal,
-            10 => OpCode::JumpIfFalse,
-            11 => OpCode::JumpIfTrue,
-            12 => OpCode::Jump,
-            13 => OpCode::Negate,
-            14 => OpCode::Not,
-            15 => OpCode::Pop,
-            16 => OpCode::Print,
-            17 => OpCode::Null,
-            18 => OpCode::True,
-            19 => OpCode::False,
-            20 => OpCode::Return,
+            5 => OpCode::Equal,
+            6 => OpCode::NotEqual,
+            7 => OpCode::Greater,
+            8 => OpCode::GreaterEqual,
+            9 => OpCode::DefineGlobal,
+            10 => OpCode::GetGlobal,
+            11 => OpCode::SetGlobal,
+            12 => OpCode::GetLocal,
+            13 => OpCode::SetLocal,
+            14 => OpCode::JumpIfFalse,
+            15 => OpCode::JumpIfTrue,
+            16 => OpCode::Jump,
+            17 => OpCode::Negate,
+            18 => OpCode::Not,
+            19 => OpCode::Pop,
+            20 => OpCode::Print,
+            21 => OpCode::Null,
+            22 => OpCode::True,
+            23 => OpCode::False,
+            24 => OpCode::Return,
             _ => panic!("unexpected opcode (did you update this match after adding an op?)"),
         }
     }
@@ -150,13 +158,13 @@ impl Compiler {
         rule(Slash,        None,                  Some(Self::binary), Precedence::Factor);
         rule(Star,         None,                  Some(Self::binary), Precedence::Factor);
         rule(Bang,         Some(Self::unary),     None,               Precedence::None);
-        rule(BangEqual,    None,                  None,               Precedence::Equality);
+        rule(BangEqual,    None,                  Some(Self::binary), Precedence::Equality);
         rule(Equal,        None,                  None,               Precedence::None);
-        rule(EqualEqual,   None,                  None,               Precedence::Equality);
-        rule(Greater,      None,                  None,               Precedence::Comparison);
-        rule(GreaterEqual, None,                  None,               Precedence::Comparison);
-        rule(Less,         None,                  None,               Precedence::Comparison);
-        rule(LessEqual,    None,                  None,               Precedence::Comparison);
+        rule(EqualEqual,   None,                  Some(Self::binary), Precedence::Equality);
+        rule(Greater,      None,                  Some(Self::binary), Precedence::Comparison);
+        rule(GreaterEqual, None,                  Some(Self::binary), Precedence::Comparison);
+        rule(Less,         None,                  Some(Self::binary), Precedence::Comparison);
+        rule(LessEqual,    None,                  Some(Self::binary), Precedence::Comparison);
         rule(Identifier,   Some(Self::variable),  None,               Precedence::None);
         rule(String,       Some(Self::string),    None,               Precedence::None);
         rule(Number,       Some(Self::number),    None,               Precedence::None);
@@ -360,6 +368,13 @@ impl Compiler {
             TokenType::Minus => self.emit_byte(OpCode::Sub as u8),
             TokenType::Star => self.emit_byte(OpCode::Mul as u8),
             TokenType::Slash => self.emit_byte(OpCode::Div as u8),
+            TokenType::EqualEqual => self.emit_byte(OpCode::Equal as u8),
+            TokenType::BangEqual => self.emit_byte(OpCode::NotEqual as u8),
+            TokenType::Greater => self.emit_byte(OpCode::Greater as u8),
+            TokenType::GreaterEqual => self.emit_byte(OpCode::GreaterEqual as u8),
+            // TODO PERF: dedicated ops for these
+            TokenType::Less => self.emit_bytes(OpCode::GreaterEqual as u8, OpCode::Not as u8),
+            TokenType::LessEqual => self.emit_bytes(OpCode::Greater as u8, OpCode::Not as u8),
             _ => self.error_at_current("Expected binary operator"),
         }
     }
