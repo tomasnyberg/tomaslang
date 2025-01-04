@@ -33,6 +33,7 @@ pub enum TokenType {
     And,
     Class,
     Else,
+    Elseif,
     False,
     Fun,
     For,
@@ -181,7 +182,16 @@ impl Scanner {
             "for" => Token::new(TokenType::For, lexeme, self.line),
             "fun" => Token::new(TokenType::Fun, lexeme, self.line),
             "global" => Token::new(TokenType::Global, lexeme, self.line),
-            "if" => Token::new(TokenType::If, lexeme, self.line),
+            "if" => {
+                if !self.tokens.is_empty()
+                    && self.tokens.last().unwrap().token_type == TokenType::Else
+                {
+                    self.tokens.pop();
+                    Token::new(TokenType::Elseif, lexeme, self.line)
+                } else {
+                    Token::new(TokenType::If, lexeme, self.line)
+                }
+            }
             "null" => Token::new(TokenType::Null, lexeme, self.line),
             "or" => Token::new(TokenType::Or, lexeme, self.line),
             "print" => Token::new(TokenType::Print, lexeme, self.line),
@@ -398,5 +408,34 @@ mod tests {
         assert_eq!(tokens[0].token_type, super::TokenType::Global);
         assert_eq!(tokens[1].token_type, super::TokenType::Identifier);
         assert_eq!(tokens[2].token_type, super::TokenType::Equal);
+    }
+
+    #[test]
+    fn parses_else_ifs() {
+        let input = "else if";
+        let tokens: Vec<Token> = super::scan(input);
+        println!("{:?}", tokens);
+        assert_eq!(tokens.len(), 2);
+        assert_eq!(tokens[0].token_type, super::TokenType::Elseif);
+        let input = "if true {} else if false {} else {}";
+        let tokens: Vec<Token> = super::scan(input);
+        let expected = [
+            TokenType::If,
+            TokenType::True,
+            TokenType::LeftBrace,
+            TokenType::RightBrace,
+            TokenType::Elseif,
+            TokenType::False,
+            TokenType::LeftBrace,
+            TokenType::RightBrace,
+            TokenType::Else,
+            TokenType::LeftBrace,
+            TokenType::RightBrace,
+            TokenType::Eof,
+        ];
+        assert_eq!(tokens.len(), expected.len());
+        for (i, token) in tokens.iter().enumerate() {
+            assert_eq!(token.token_type, expected[i]);
+        }
     }
 }

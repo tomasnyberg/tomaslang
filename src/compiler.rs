@@ -388,15 +388,31 @@ impl Compiler {
         self.emit_byte(OpCode::Pop as u8);
         self.statement();
 
-        let over_else_jump = self.emit_jump(OpCode::Jump);
+        // All jumps that shuold jump over the whole thing (end of any block that
+        // isn't the else block. The first one is the jump after the then block).
+        let mut to_end_jumps: Vec<usize> = vec![self.emit_jump(OpCode::Jump)];
         self.patch_jump(over_then_jump);
-        // Pop the condition if we went to the else block
         self.emit_byte(OpCode::Pop as u8);
+
+        // Else if
+        while self.match_(TokenType::Elseif) && !self.match_(TokenType::Eof) {
+            self.expression();
+            let over_then_jump = self.emit_jump(OpCode::JumpIfFalse);
+            self.emit_byte(OpCode::Pop as u8);
+            self.statement();
+            to_end_jumps.push(self.emit_jump(OpCode::Jump));
+            self.patch_jump(over_then_jump);
+            self.emit_byte(OpCode::Pop as u8);
+        }
+
+        // Pop the condition if we went to the else block
         if self.match_(TokenType::Else) {
             self.statement();
         }
         // At the end of the then block, jump over the end of the else block (if it's there)
-        self.patch_jump(over_else_jump);
+        for jump in to_end_jumps {
+            self.patch_jump(jump);
+        }
     }
 
     fn return_statement(&mut self) {
@@ -860,5 +876,10 @@ mod tests {
         assert_eq!(compiled, CompilerResult::CompileError);
         let compiled = compile("if print { print 2; }");
         assert_eq!(compiled, CompilerResult::CompileError);
+    }
+
+    #[test]
+    fn else_if_statements() {
+        let chunk: Chunk = compile_to_chunk("if (true) { print 1; } else if (false) { print 2; }");
     }
 }
