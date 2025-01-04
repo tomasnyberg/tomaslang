@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, ops::Shr};
 
 use crate::{chunk::*, scanner::*, vm::Value};
 
@@ -39,6 +39,7 @@ pub enum OpCode {
     JumpIfFalse,
     JumpIfTrue,
     Jump,
+    Loop,
     Negate,
     Not,
     Pop,
@@ -117,14 +118,15 @@ impl OpCode {
             14 => OpCode::JumpIfFalse,
             15 => OpCode::JumpIfTrue,
             16 => OpCode::Jump,
-            17 => OpCode::Negate,
-            18 => OpCode::Not,
-            19 => OpCode::Pop,
-            20 => OpCode::Print,
-            21 => OpCode::Null,
-            22 => OpCode::True,
-            23 => OpCode::False,
-            24 => OpCode::Return,
+            17 => OpCode::Loop,
+            18 => OpCode::Negate,
+            19 => OpCode::Not,
+            20 => OpCode::Pop,
+            21 => OpCode::Print,
+            22 => OpCode::Null,
+            23 => OpCode::True,
+            24 => OpCode::False,
+            25 => OpCode::Return,
             _ => panic!("unexpected opcode (did you update this match after adding an op?)"),
         }
     }
@@ -302,6 +304,16 @@ impl Compiler {
         self.chunk.code.len() - 2
     }
 
+    fn emit_loop(&mut self, loop_start: usize) {
+        self.emit_byte(OpCode::Loop as u8);
+        let offset = self.chunk.code.len() - loop_start + 2;
+        if offset > 0xffff {
+            self.error_at_current("Loop body too large");
+        }
+        self.emit_byte(offset.shr(8) as u8);
+        self.emit_byte(offset as u8);
+    }
+
     fn patch_jump(&mut self, offset: usize) {
         if offset > 0xffff {
             self.error_at_current("Too much code to jump over");
@@ -435,7 +447,15 @@ impl Compiler {
     }
 
     fn while_statement(&mut self) {
-        panic!("While statement not implemented");
+        self.consume(TokenType::While, "Expected 'while' to start while loop");
+        let loop_start: usize = self.chunk.code.len();
+        self.expression();
+        let exit_jump: usize = self.emit_jump(OpCode::JumpIfFalse);
+        self.emit_byte(OpCode::Pop as u8);
+        self.statement();
+        self.emit_loop(loop_start);
+        self.patch_jump(exit_jump);
+        self.emit_byte(OpCode::Pop as u8);
     }
 
     fn begin_scope(&mut self) {
@@ -920,6 +940,40 @@ mod tests {
             OpCode::Jump as u8,
             0x0,
             0x1,
+            OpCode::Pop as u8,
+            OpCode::Return as u8,
+        ];
+        chunk.disassemble("test");
+        match_bytecode(&chunk, &expected);
+    }
+
+    #[test]
+    fn while_statement() {
+        let chunk: Chunk = compile_to_chunk("let a = 0;\n while a < 10 {\n a = a + 1; \n}");
+        let expected = [
+            OpCode::Constant as u8,
+            0,
+            OpCode::GetLocal as u8,
+            0,
+            OpCode::Constant as u8,
+            1,
+            OpCode::GreaterEqual as u8,
+            OpCode::Not as u8,
+            OpCode::JumpIfFalse as u8,
+            0x0,
+            0xc,
+            OpCode::Pop as u8,
+            OpCode::GetLocal as u8,
+            0,
+            OpCode::Constant as u8,
+            2,
+            OpCode::Add as u8,
+            OpCode::SetLocal as u8,
+            0,
+            OpCode::Pop as u8,
+            OpCode::Loop as u8,
+            0x0,
+            0x15,
             OpCode::Pop as u8,
             OpCode::Return as u8,
         ];

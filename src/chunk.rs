@@ -41,7 +41,7 @@ impl Chunk {
             "{:16} {:4} -> {}",
             name,
             offset,
-            offset + 3 + (sign * jump) as usize
+            (offset as i16) + 3 + (sign * jump)
         );
         offset + 3
     }
@@ -73,6 +73,7 @@ impl Chunk {
             OpCode::JumpIfFalse => self.jump_instruction("JUMP_IF_FALSE_OP", 1, offset),
             OpCode::JumpIfTrue => self.jump_instruction("JUMP_IF_TRUE_OP", 1, offset),
             OpCode::Jump => self.jump_instruction("JUMP_OP", 1, offset),
+            OpCode::Loop => self.jump_instruction("LOOP_OP", -1, offset),
             OpCode::Negate => self.simple_instruction("NEGATE_OP", offset),
             OpCode::Not => self.simple_instruction("NOT_OP", offset),
             OpCode::Pop => self.simple_instruction("POP_OP", offset),

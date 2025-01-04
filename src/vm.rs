@@ -295,6 +295,10 @@ impl VM {
                     let offset = self.read_short() as usize;
                     self.ip += offset;
                 }
+                OpCode::Loop => {
+                    let offset = self.read_short() as usize;
+                    self.ip -= offset;
+                }
                 OpCode::Print => println!("{}", self.pop()),
                 OpCode::Null => self.push(Value::Null),
                 OpCode::True => self.push(Value::Bool(true)),
