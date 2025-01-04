@@ -1,0 +1,17 @@
+// EXPECT 5\n5\na is true:)
+if true
+  print 5;
+if false
+  print 7;
+if false
+  print 7;
+else
+  print 5;
+
+let a = true;
+
+if a {
+  print "a is true:)";
+} else {
+  print "a is false :(";
+}

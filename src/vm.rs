@@ -93,6 +93,12 @@ impl VM {
         byte
     }
 
+    fn read_short(&mut self) -> u16 {
+        let short = (self.chunk.code[self.ip] as u16) << 8 | self.chunk.code[self.ip + 1] as u16;
+        self.ip += 2;
+        short
+    }
+
     fn trace_execution(&self) {
         if !cfg!(feature = "debug_trace_execution") {
             return;
@@ -237,6 +243,22 @@ impl VM {
                     let position = self.read_byte();
                     let value = self.peek(0).clone();
                     self.stack[position as usize] = value;
+                }
+                OpCode::JumpIfFalse => {
+                    let offset = self.read_short() as usize;
+                    if !self.is_truthy(self.peek(0)) {
+                        self.ip += offset;
+                    }
+                }
+                OpCode::JumpIfTrue => {
+                    let offset = self.read_short() as usize;
+                    if self.is_truthy(self.peek(0)) {
+                        self.ip += offset;
+                    }
+                }
+                OpCode::Jump => {
+                    let offset = self.read_short() as usize;
+                    self.ip += offset;
                 }
                 OpCode::Print => println!("{}", self.pop()),
                 OpCode::Null => self.push(Value::Null),

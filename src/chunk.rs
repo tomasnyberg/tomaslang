@@ -35,6 +35,17 @@ impl Chunk {
         offset + 2
     }
 
+    fn jump_instruction(&self, name: &str, sign: i16, offset: usize) -> usize {
+        let jump = ((self.code[offset + 1] as i16) << 8) | self.code[offset + 2] as i16;
+        println!(
+            "{:16} {:4} -> {}",
+            name,
+            offset,
+            offset + 3 + (sign * jump) as usize
+        );
+        offset + 3
+    }
+
     pub fn disassemble_instruction(&self, offset: usize) -> usize {
         print!("{:04} ", offset);
         if offset > 0 && self.lines[offset] == self.lines[offset - 1] {
@@ -55,6 +66,9 @@ impl Chunk {
             OpCode::SetGlobal => self.constant_instruction("SET_GLOBAL_OP", offset),
             OpCode::GetLocal => self.byte_instruction("GET_LOCAL_OP", offset),
             OpCode::SetLocal => self.byte_instruction("SET_LOCAL_OP", offset),
+            OpCode::JumpIfFalse => self.jump_instruction("JUMP_IF_FALSE_OP", 1, offset),
+            OpCode::JumpIfTrue => self.jump_instruction("JUMP_IF_TRUE_OP", 1, offset),
+            OpCode::Jump => self.jump_instruction("JUMP_OP", 1, offset),
             OpCode::Negate => self.simple_instruction("NEGATE_OP", offset),
             OpCode::Not => self.simple_instruction("NOT_OP", offset),
             OpCode::Pop => self.simple_instruction("POP_OP", offset),

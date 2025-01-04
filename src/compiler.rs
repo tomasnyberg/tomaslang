@@ -18,7 +18,7 @@ struct Local {
     constant: bool,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 #[repr(u8)]
 #[allow(dead_code)]
 pub enum OpCode {
@@ -32,6 +32,9 @@ pub enum OpCode {
     SetGlobal,
     GetLocal,
     SetLocal,
+    JumpIfFalse,
+    JumpIfTrue,
+    Jump,
     Negate,
     Not,
     Pop,
@@ -103,14 +106,17 @@ impl OpCode {
             7 => OpCode::SetGlobal,
             8 => OpCode::GetLocal,
             9 => OpCode::SetLocal,
-            10 => OpCode::Negate,
-            11 => OpCode::Not,
-            12 => OpCode::Pop,
-            13 => OpCode::Print,
-            14 => OpCode::Null,
-            15 => OpCode::True,
-            16 => OpCode::False,
-            17 => OpCode::Return,
+            10 => OpCode::JumpIfFalse,
+            11 => OpCode::JumpIfTrue,
+            12 => OpCode::Jump,
+            13 => OpCode::Negate,
+            14 => OpCode::Not,
+            15 => OpCode::Pop,
+            16 => OpCode::Print,
+            17 => OpCode::Null,
+            18 => OpCode::True,
+            19 => OpCode::False,
+            20 => OpCode::Return,
             _ => panic!("unexpected opcode (did you update this match after adding an op?)"),
         }
     }
@@ -280,6 +286,23 @@ impl Compiler {
         }
     }
 
+    fn emit_jump(&mut self, jump_type: OpCode) -> usize {
+        assert!([OpCode::Jump, OpCode::JumpIfFalse, OpCode::JumpIfTrue].contains(&jump_type));
+        self.emit_byte(jump_type as u8);
+        self.emit_byte(0xff);
+        self.emit_byte(0xff);
+        self.chunk.code.len() - 2
+    }
+
+    fn patch_jump(&mut self, offset: usize) {
+        if offset > 0xffff {
+            self.error_at_current("Too much code to jump over");
+        }
+        let jump = self.chunk.code.len() - offset - 2;
+        self.chunk.code[offset] = ((jump >> 8) & 0xff) as u8;
+        self.chunk.code[offset + 1] = (jump & 0xff) as u8;
+    }
+
     fn emit_constant(&mut self, value: Value) {
         let index = self.make_constant(value);
         self.emit_bytes(OpCode::Constant as u8, index);
@@ -357,7 +380,23 @@ impl Compiler {
     }
 
     fn if_statement(&mut self) {
-        panic!("If statement not implemented");
+        self.consume(TokenType::If, "Expected 'if' to start if statement");
+        self.expression();
+        // Jump over the then block
+        let over_then_jump = self.emit_jump(OpCode::JumpIfFalse);
+        // Pop the condition
+        self.emit_byte(OpCode::Pop as u8);
+        self.statement();
+
+        let over_else_jump = self.emit_jump(OpCode::Jump);
+        self.patch_jump(over_then_jump);
+        // Pop the condition if we went to the else block
+        self.emit_byte(OpCode::Pop as u8);
+        if self.match_(TokenType::Else) {
+            self.statement();
+        }
+        // At the end of the then block, jump over the end of the else block (if it's there)
+        self.patch_jump(over_else_jump);
     }
 
     fn return_statement(&mut self) {
@@ -765,6 +804,61 @@ mod tests {
         let compiled = compile("const a; print a;");
         assert_eq!(compiled, CompilerResult::CompileError);
         let compiled = compile("const a = 100; a = 200;");
+        assert_eq!(compiled, CompilerResult::CompileError);
+    }
+
+    #[test]
+    fn if_statement() {
+        let chunk: Chunk = compile_to_chunk("if (true) { print 1; }");
+        let expected = [
+            OpCode::True as u8,
+            OpCode::JumpIfFalse as u8, // Jump 1 FROM
+            0x0,
+            0x7,
+            OpCode::Pop as u8,
+            OpCode::Constant as u8,
+            0,
+            OpCode::Print as u8,
+            OpCode::Jump as u8, // Jump 2 FROM
+            0x0,
+            0x1,
+            OpCode::Pop as u8,    // Jump 1 TO
+            OpCode::Return as u8, // Jump 2 TO
+        ];
+        chunk.disassemble("test");
+        match_bytecode(&chunk, &expected);
+    }
+
+    #[test]
+    fn if_else_statement() {
+        let chunk: Chunk = compile_to_chunk("if (true) { print 1; } else { print 2; }");
+        let expected = [
+            OpCode::True as u8,
+            OpCode::JumpIfFalse as u8, // Jump 1 FROM
+            0x0,
+            0x7,
+            OpCode::Pop as u8,
+            OpCode::Constant as u8,
+            0,
+            OpCode::Print as u8,
+            OpCode::Jump as u8, // Jump 2 FROM
+            0x0,
+            0x4,
+            OpCode::Pop as u8, // Jump 1 TO
+            OpCode::Constant as u8,
+            1,
+            OpCode::Print as u8,
+            OpCode::Return as u8, // Jump 2 TO
+        ];
+        chunk.disassemble("test");
+        match_bytecode(&chunk, &expected);
+    }
+
+    #[test]
+    fn bad_if_statements() {
+        let compiled = compile("else { print 2; }");
+        assert_eq!(compiled, CompilerResult::CompileError);
+        let compiled = compile("if print { print 2; }");
         assert_eq!(compiled, CompilerResult::CompileError);
     }
 }
