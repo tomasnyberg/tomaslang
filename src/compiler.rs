@@ -896,5 +896,34 @@ mod tests {
     #[test]
     fn else_if_statements() {
         let chunk: Chunk = compile_to_chunk("if (true) { print 1; } else if (false) { print 2; }");
+        let expected = [
+            OpCode::True as u8,
+            OpCode::JumpIfFalse as u8,
+            0x0,
+            0x7,
+            OpCode::Pop as u8,
+            OpCode::Constant as u8,
+            0,
+            OpCode::Print as u8,
+            OpCode::Jump as u8,
+            0x0,
+            0xd,
+            OpCode::Pop as u8,
+            OpCode::False as u8,
+            OpCode::JumpIfFalse as u8,
+            0x0,
+            0x7,
+            OpCode::Pop as u8,
+            OpCode::Constant as u8,
+            1,
+            OpCode::Print as u8,
+            OpCode::Jump as u8,
+            0x0,
+            0x1,
+            OpCode::Pop as u8,
+            OpCode::Return as u8,
+        ];
+        chunk.disassemble("test");
+        match_bytecode(&chunk, &expected);
     }
 }
