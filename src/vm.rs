@@ -25,7 +25,7 @@ impl Value {
             Value::Number(n) => n.to_string(),
             Value::Bool(b) => b.to_string(),
             Value::Null => "null".to_string(),
-            Value::String(s) => s.clone(),
+            Value::String(s) => s.to_string(),
         }
     }
 
@@ -125,9 +125,10 @@ impl VM {
         match op {
             OpCode::Add => {
                 if a.is_string() || b.is_string() {
-                    let a = a.as_string();
+                    let mut a = a.as_string();
                     let b = b.as_string();
-                    self.push(Value::String(format!("{}{}", a, b)));
+                    a.push_str(&b);
+                    self.push(Value::String(a));
                     return;
                 }
                 self.push(Value::Number(a.as_number() + b.as_number()));
