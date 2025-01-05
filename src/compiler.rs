@@ -170,7 +170,7 @@ impl Compiler {
         rule(Identifier,   Some(Self::variable),  None,               Precedence::None);
         rule(String,       Some(Self::string),    None,               Precedence::None);
         rule(Number,       Some(Self::number),    None,               Precedence::None);
-        rule(And,          None,                  None,               Precedence::And);
+        rule(And,          None,                  Some(Self::and),    Precedence::And);
         rule(Class,        None,                  None,               Precedence::None);
         rule(Else,         None,                  None,               Precedence::None);
         rule(False,        Some(Self::literal),   None,               Precedence::None);
@@ -178,7 +178,7 @@ impl Compiler {
         rule(For,          None,                  None,               Precedence::None);
         rule(If,           None,                  None,               Precedence::None);
         rule(Null,         Some(Self::literal),   None,               Precedence::None);
-        rule(Or,           None,                  None,               Precedence::Or);
+        rule(Or,           None,                  Some(Self::or),     Precedence::Or);
         rule(Print,        None,                  None,               Precedence::None);
         rule(Return,       None,                  None,               Precedence::None);
         rule(Super,        None,                  None,               Precedence::None);
@@ -369,6 +369,20 @@ impl Compiler {
     fn emit_bytes(&mut self, byte1: u8, byte2: u8) {
         self.emit_byte(byte1);
         self.emit_byte(byte2);
+    }
+
+    fn and(&mut self) {
+        let end_jump = self.emit_jump(OpCode::JumpIfFalse);
+        self.emit_byte(OpCode::Pop as u8);
+        self.parse_precedence(Precedence::And);
+        self.patch_jump(end_jump);
+    }
+
+    fn or(&mut self) {
+        let end_jump = self.emit_jump(OpCode::JumpIfTrue);
+        self.emit_byte(OpCode::Pop as u8);
+        self.parse_precedence(Precedence::Or);
+        self.patch_jump(end_jump);
     }
 
     fn binary(&mut self) {
