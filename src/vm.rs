@@ -9,6 +9,7 @@ pub enum Value {
     Null,
     String(String),
     Function(Function),
+    ReturnAddress(usize),
 }
 
 #[allow(dead_code)]
@@ -35,6 +36,7 @@ impl Value {
             Value::Null => "null".to_string(),
             Value::String(s) => s.to_string(),
             Value::Function(f) => format!("<fn {} (start at {})>", f.name.lexeme, f.start),
+            Value::ReturnAddress(x) => format!("RA {x}"),
         }
     }
 
@@ -207,6 +209,9 @@ impl VM {
             Value::Number(n) => *n != 0.0,
             Value::String(s) => !s.is_empty(),
             Value::Function(_) => true,
+            Value::ReturnAddress(_) => {
+                panic!("Return address should not be possible to evaluate for truth")
+            }
         }
     }
 
@@ -312,17 +317,16 @@ impl VM {
                 }
                 OpCode::Call => {
                     let called = self.pop();
-                    match called {
-                        Value::Function(_) => {}
+                    let called = match called {
+                        Value::Function(_) => called.as_function(),
                         _ => {
                             self.runtime_error("Can only call functions");
                             return VmResult::RuntimeError;
                         }
-                    }
-                    let called = called.as_function();
-                    let next_instruction = self.ip;
+                    };
+                    let return_address = Value::ReturnAddress(self.ip);
                     self.ip = called.start;
-                    self.push(Value::Number(next_instruction as f64));
+                    self.push(return_address);
                 }
                 OpCode::Print => println!("{}", self.pop()),
                 OpCode::Null => self.push(Value::Null),
@@ -331,7 +335,13 @@ impl VM {
                 OpCode::Return => {
                     let returned_value = self.pop();
                     let return_address = self.pop();
-                    self.ip = return_address.as_number() as usize;
+                    match return_address {
+                        Value::ReturnAddress(ip) => self.ip = ip,
+                        _ => {
+                            self.runtime_error("Return did not pop a return address");
+                            return VmResult::RuntimeError;
+                        }
+                    }
                     self.push(returned_value);
                 }
                 OpCode::Eof => {
