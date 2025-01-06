@@ -1,5 +1,10 @@
-// EXPECT Hi from function
+// EXPECT 5\n4\n3\n2\n1
+global a = 5;
 fn printfun() {
-  print "Hi from function";
+  if a > 0 {
+    print a;
+    a = a - 1;
+    printfun();
+  }
 }
 printfun();

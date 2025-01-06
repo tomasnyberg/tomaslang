@@ -2,6 +2,16 @@ use std::{collections::HashMap, ops::Shr};
 
 use crate::{chunk::*, scanner::*, vm::Value};
 
+macro_rules! active_chunk {
+    ($this:expr) => {
+        if $this.push_to_fn == -1 {
+            &mut $this.chunk
+        } else {
+            &mut $this.functions[$this.push_to_fn as usize].chunk
+        }
+    };
+}
+
 struct Compiler {
     tokens: Vec<Token>,
     current: usize,
@@ -323,12 +333,13 @@ impl Compiler {
         self.emit_byte(jump_type as u8, true);
         self.emit_byte(0xff, false);
         self.emit_byte(0xff, false);
-        self.chunk.code.len() - 2
+        active_chunk!(self).code.len() - 2
     }
 
     fn emit_loop(&mut self, loop_start: usize) {
         self.emit_byte(OpCode::Loop as u8, true);
-        let offset = self.chunk.code.len() - loop_start + 2;
+        let chunk = active_chunk!(self);
+        let offset = chunk.code.len() - loop_start + 2;
         if offset > 0xffff {
             self.error_at_current("Loop body too large");
         }
@@ -340,9 +351,12 @@ impl Compiler {
         if offset > 0xffff {
             self.error_at_current("Too much code to jump over");
         }
-        let jump = self.chunk.code.len() - offset - 2;
-        self.chunk.code[offset] = ((jump >> 8) & 0xff) as u8;
-        self.chunk.code[offset + 1] = (jump & 0xff) as u8;
+        let chunk = active_chunk!(self);
+        let jump = chunk.code.len() - offset - 2;
+        chunk.code[offset] = ((jump >> 8) & 0xff) as u8;
+        chunk.code[offset + 1] = (jump & 0xff) as u8;
+        chunk.debug_code[offset] = format!("{:3} (op)", chunk.code[offset]);
+        chunk.debug_code[offset + 1] = format!("{:3} (op)", chunk.code[offset + 1]);
     }
 
     fn emit_constant(&mut self, value: Value) -> u8 {
@@ -384,11 +398,7 @@ impl Compiler {
 
     fn emit_byte(&mut self, byte: u8, is_op: bool) {
         // Push code to the functions chunk rather than the script
-        let chunk = if self.push_to_fn == -1 {
-            &mut self.chunk
-        } else {
-            &mut self.functions[self.push_to_fn as usize].chunk
-        };
+        let chunk = active_chunk!(self);
         chunk.code.push(byte);
         chunk
             .lines
@@ -497,7 +507,8 @@ impl Compiler {
 
     fn while_statement(&mut self) {
         self.consume(TokenType::While, "Expected 'while' to start while loop");
-        let loop_start: usize = self.chunk.code.len();
+        let chunk = active_chunk!(self);
+        let loop_start: usize = chunk.code.len();
         self.expression();
         let exit_jump: usize = self.emit_jump(OpCode::JumpIfFalse);
         self.emit_byte(OpCode::Pop as u8, true);
@@ -583,7 +594,7 @@ impl Compiler {
     fn function_declaration(&mut self) {
         self.consume(TokenType::Identifier, "Expected function name");
         let name = self.tokens[self.current - 1].clone();
-        let start = self.chunk.code.len();
+        let start = active_chunk!(self).code.len();
         self.functions.push(Function {
             chunk: Chunk::new(),
             start,
@@ -667,6 +678,11 @@ impl Compiler {
     }
 
     fn append_functions(&mut self) {
+        let fn_depth = self.push_to_fn;
+        if fn_depth != -1 {
+            panic!("Function depth was not reset to -1 in append functions call");
+        }
+        // These should all go in the base chunk (self.chunk)
         for function in self.functions.iter_mut() {
             function.start = self.chunk.code.len();
             self.chunk.code.append(&mut function.chunk.code);
