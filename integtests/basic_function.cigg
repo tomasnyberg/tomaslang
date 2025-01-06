@@ -1,0 +1,30 @@
+// EXPECT a\nb\nc\nd\nb\nc\nd
+fn a() {
+  print "a";
+}
+
+fn b() {
+  print "b";
+}
+
+fn c() {
+  print "c";
+}
+
+fn d() {
+  print "d";
+}
+
+a();
+b();
+c();
+d();
+
+// Functions are values and so should be able to be reassigned
+a = b;
+a(); // b
+
+b = c;
+c = d;
+b(); // c
+c(); // d

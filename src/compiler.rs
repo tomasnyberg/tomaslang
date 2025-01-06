@@ -4,11 +4,7 @@ use crate::{chunk::*, scanner::*, vm::Value};
 
 macro_rules! active_chunk {
     ($this:expr) => {
-        if $this.push_to_fn == -1 {
-            &mut $this.chunk
-        } else {
-            &mut $this.functions[$this.push_to_fn as usize].chunk
-        }
+        &mut $this.compiling_chunks.last_mut().unwrap()
     };
 }
 
@@ -16,15 +12,12 @@ struct Compiler {
     tokens: Vec<Token>,
     current: usize,
     error: bool,
-    chunk: Chunk,
+    compiling_chunks: Vec<Chunk>,
+    compiled_chunks: Vec<Chunk>,
     rules: HashMap<TokenType, ParseRule>,
     locals: Vec<Local>,
     scope_depth: usize,
     functions: Vec<Function>,
-    // If we are currently parsing a function, push to that functions chunk.
-    // That code will be put at the end of the whole file when compilation is done
-    // (see the append_functions method)
-    push_to_fn: i32,
 }
 
 struct Local {
@@ -38,7 +31,6 @@ pub struct Function {
     pub start: usize,
     pub name: Token,
     arity: u8,
-    chunk: Chunk,
     const_idx: usize,
 }
 
@@ -227,12 +219,12 @@ impl Compiler {
             tokens,
             current: 0,
             error: false,
-            chunk: Chunk::new(),
+            compiling_chunks: vec![Chunk::new()],
+            compiled_chunks: Vec::new(),
             rules: Self::create_rules(),
             locals: Vec::new(),
             scope_depth: 0,
             functions: Vec::new(),
-            push_to_fn: -1,
         }
     }
 
@@ -366,9 +358,10 @@ impl Compiler {
     }
 
     fn make_constant(&mut self, value: Value) -> u8 {
-        let index: u8 = self.chunk.constants.len() as u8;
-        self.chunk.constants.push(value);
-        if self.chunk.constants.len() > 256 {
+        let first_chunk = &mut self.compiling_chunks[0];
+        let index: u8 = first_chunk.constants.len() as u8;
+        first_chunk.constants.push(value);
+        if first_chunk.constants.len() > 256 {
             self.error_at_current("Too many constants in one chunk");
         }
         index
@@ -596,7 +589,6 @@ impl Compiler {
         let name = self.tokens[self.current - 1].clone();
         let start = active_chunk!(self).code.len();
         self.functions.push(Function {
-            chunk: Chunk::new(),
             start,
             name: name.clone(),
             arity: 0,     // TODO: arity
@@ -607,7 +599,7 @@ impl Compiler {
             depth: self.scope_depth as i32,
             constant: false,
         });
-        self.push_to_fn += 1;
+        self.compiling_chunks.push(Chunk::new());
         self.begin_scope();
         self.consume(TokenType::LeftParen, "Expected '(' after function name");
         self.consume(
@@ -619,7 +611,8 @@ impl Compiler {
         self.end_scope();
         // TODO: Allow return value
         self.emit_bytes(OpCode::Null as u8, OpCode::Return as u8);
-        self.push_to_fn -= 1;
+        self.compiled_chunks
+            .push(self.compiling_chunks.pop().unwrap());
         let const_idx = self.emit_constant(Value::Function(self.functions.last().unwrap().clone()));
         self.functions.last_mut().unwrap().const_idx = const_idx as usize;
     }
@@ -678,18 +671,25 @@ impl Compiler {
     }
 
     fn append_functions(&mut self) {
-        let fn_depth = self.push_to_fn;
-        if fn_depth != -1 {
-            panic!("Function depth was not reset to -1 in append functions call");
+        assert_eq!(
+            self.compiling_chunks.len(),
+            1,
+            "Expected only one chunk (the script)"
+        );
+        // Put all the function code after the Eof
+        let mut final_chunk = self.compiling_chunks.pop().unwrap();
+        for (chunk, func) in self
+            .compiled_chunks
+            .iter_mut()
+            .zip(self.functions.iter_mut())
+        {
+            func.start = final_chunk.code.len();
+            final_chunk.constants[func.const_idx] = Value::Function(func.clone());
+            final_chunk.code.append(&mut chunk.code);
+            final_chunk.lines.append(&mut chunk.lines);
+            final_chunk.debug_code.append(&mut chunk.debug_code);
         }
-        // These should all go in the base chunk (self.chunk)
-        for function in self.functions.iter_mut() {
-            function.start = self.chunk.code.len();
-            self.chunk.code.append(&mut function.chunk.code);
-            self.chunk.lines.append(&mut function.chunk.lines);
-            self.chunk.debug_code.append(&mut function.chunk.debug_code);
-            self.chunk.constants[function.const_idx] = Value::Function(function.clone());
-        }
+        self.compiled_chunks = vec![final_chunk];
     }
 
     fn statement(&mut self) {
@@ -722,7 +722,7 @@ pub fn compile(input: &str) -> CompilerResult {
     if parser.error {
         CompilerResult::CompileError
     } else {
-        CompilerResult::Chunk(parser.chunk)
+        CompilerResult::Chunk(parser.compiled_chunks.pop().unwrap())
     }
 }
 
