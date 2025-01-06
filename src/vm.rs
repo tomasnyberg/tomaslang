@@ -35,7 +35,7 @@ impl Value {
             Value::Bool(b) => b.to_string(),
             Value::Null => "null".to_string(),
             Value::String(s) => s.to_string(),
-            Value::Function(f) => format!("<fn {} (start at {})>", f.name.lexeme, f.start),
+            Value::Function(f) => format!("<fn {}>", f.name.lexeme),
             Value::ReturnAddress(x) => format!("RA {x}"),
         }
     }

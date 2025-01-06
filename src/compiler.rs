@@ -256,15 +256,15 @@ impl Compiler {
 
     fn call(&mut self) {
         // TODO: Arg count
-        self.emit_byte(OpCode::Call as u8);
+        self.emit_byte(OpCode::Call as u8, true);
         self.consume(TokenType::RightParen, "Expected ')' after arguments");
     }
 
     fn literal(&mut self) {
         match self.tokens[self.current - 1].token_type {
-            TokenType::Null => self.emit_byte(OpCode::Null as u8),
-            TokenType::True => self.emit_byte(OpCode::True as u8),
-            TokenType::False => self.emit_byte(OpCode::False as u8),
+            TokenType::Null => self.emit_byte(OpCode::Null as u8, true),
+            TokenType::True => self.emit_byte(OpCode::True as u8, true),
+            TokenType::False => self.emit_byte(OpCode::False as u8, true),
             _ => self.error_at_current("Expected literal (Null, True, False)"),
         }
     }
@@ -312,28 +312,28 @@ impl Compiler {
         let operator = self.tokens[self.current - 1].token_type;
         self.parse_precedence(Precedence::Unary);
         match operator {
-            TokenType::Minus => self.emit_byte(OpCode::Negate as u8),
-            TokenType::Bang => self.emit_byte(OpCode::Not as u8),
+            TokenType::Minus => self.emit_byte(OpCode::Negate as u8, true),
+            TokenType::Bang => self.emit_byte(OpCode::Not as u8, true),
             _ => self.error_at_current("Expected unary operator"),
         }
     }
 
     fn emit_jump(&mut self, jump_type: OpCode) -> usize {
         assert!([OpCode::Jump, OpCode::JumpIfFalse, OpCode::JumpIfTrue].contains(&jump_type));
-        self.emit_byte(jump_type as u8);
-        self.emit_byte(0xff);
-        self.emit_byte(0xff);
+        self.emit_byte(jump_type as u8, true);
+        self.emit_byte(0xff, false);
+        self.emit_byte(0xff, false);
         self.chunk.code.len() - 2
     }
 
     fn emit_loop(&mut self, loop_start: usize) {
-        self.emit_byte(OpCode::Loop as u8);
+        self.emit_byte(OpCode::Loop as u8, true);
         let offset = self.chunk.code.len() - loop_start + 2;
         if offset > 0xffff {
             self.error_at_current("Loop body too large");
         }
-        self.emit_byte(offset.shr(8) as u8);
-        self.emit_byte(offset as u8);
+        self.emit_byte(offset.shr(8) as u8, false);
+        self.emit_byte(offset as u8, false);
     }
 
     fn patch_jump(&mut self, offset: usize) {
@@ -382,7 +382,7 @@ impl Compiler {
         self.current += 1;
     }
 
-    fn emit_byte(&mut self, byte: u8) {
+    fn emit_byte(&mut self, byte: u8, is_op: bool) {
         // Push code to the functions chunk rather than the script
         let chunk = if self.push_to_fn == -1 {
             &mut self.chunk
@@ -393,23 +393,29 @@ impl Compiler {
         chunk
             .lines
             .push(self.tokens[self.current - 1].line as usize);
+        let to_push = if is_op {
+            format!("{:3} {:?}", byte, OpCode::from_u8(byte))
+        } else {
+            format!("{:3} (op)", byte)
+        };
+        chunk.debug_code.push(to_push);
     }
 
     fn emit_bytes(&mut self, byte1: u8, byte2: u8) {
-        self.emit_byte(byte1);
-        self.emit_byte(byte2);
+        self.emit_byte(byte1, true);
+        self.emit_byte(byte2, false);
     }
 
     fn and(&mut self) {
         let end_jump = self.emit_jump(OpCode::JumpIfFalse);
-        self.emit_byte(OpCode::Pop as u8);
+        self.emit_byte(OpCode::Pop as u8, true);
         self.parse_precedence(Precedence::And);
         self.patch_jump(end_jump);
     }
 
     fn or(&mut self) {
         let end_jump = self.emit_jump(OpCode::JumpIfTrue);
-        self.emit_byte(OpCode::Pop as u8);
+        self.emit_byte(OpCode::Pop as u8, true);
         self.parse_precedence(Precedence::Or);
         self.patch_jump(end_jump);
     }
@@ -419,14 +425,14 @@ impl Compiler {
         let rule: ParseRule = self.rules[&operator];
         self.parse_precedence(rule.precedence.next());
         match operator {
-            TokenType::Plus => self.emit_byte(OpCode::Add as u8),
-            TokenType::Minus => self.emit_byte(OpCode::Sub as u8),
-            TokenType::Star => self.emit_byte(OpCode::Mul as u8),
-            TokenType::Slash => self.emit_byte(OpCode::Div as u8),
-            TokenType::EqualEqual => self.emit_byte(OpCode::Equal as u8),
-            TokenType::BangEqual => self.emit_byte(OpCode::NotEqual as u8),
-            TokenType::Greater => self.emit_byte(OpCode::Greater as u8),
-            TokenType::GreaterEqual => self.emit_byte(OpCode::GreaterEqual as u8),
+            TokenType::Plus => self.emit_byte(OpCode::Add as u8, true),
+            TokenType::Minus => self.emit_byte(OpCode::Sub as u8, true),
+            TokenType::Star => self.emit_byte(OpCode::Mul as u8, true),
+            TokenType::Slash => self.emit_byte(OpCode::Div as u8, true),
+            TokenType::EqualEqual => self.emit_byte(OpCode::Equal as u8, true),
+            TokenType::BangEqual => self.emit_byte(OpCode::NotEqual as u8, true),
+            TokenType::Greater => self.emit_byte(OpCode::Greater as u8, true),
+            TokenType::GreaterEqual => self.emit_byte(OpCode::GreaterEqual as u8, true),
             // TODO PERF: dedicated ops for these
             TokenType::Less => self.emit_bytes(OpCode::GreaterEqual as u8, OpCode::Not as u8),
             TokenType::LessEqual => self.emit_bytes(OpCode::Greater as u8, OpCode::Not as u8),
@@ -442,7 +448,7 @@ impl Compiler {
         self.advance(); // Move over the print token
         self.expression();
         self.consume(TokenType::Semicolon, "Expected ';' after value");
-        self.emit_byte(OpCode::Print as u8);
+        self.emit_byte(OpCode::Print as u8, true);
     }
 
     fn for_statement(&mut self) {
@@ -455,24 +461,24 @@ impl Compiler {
         // Jump over the then block
         let over_then_jump = self.emit_jump(OpCode::JumpIfFalse);
         // Pop the condition
-        self.emit_byte(OpCode::Pop as u8);
+        self.emit_byte(OpCode::Pop as u8, true);
         self.statement();
 
         // All jumps that shuold jump over the whole thing (end of any block that
         // isn't the else block. The first one is the jump after the then block).
         let mut to_end_jumps: Vec<usize> = vec![self.emit_jump(OpCode::Jump)];
         self.patch_jump(over_then_jump);
-        self.emit_byte(OpCode::Pop as u8);
+        self.emit_byte(OpCode::Pop as u8, true);
 
         // Else if
         while self.match_(TokenType::Elseif) && !self.match_(TokenType::Eof) {
             self.expression();
             let over_then_jump = self.emit_jump(OpCode::JumpIfFalse);
-            self.emit_byte(OpCode::Pop as u8);
+            self.emit_byte(OpCode::Pop as u8, true);
             self.statement();
             to_end_jumps.push(self.emit_jump(OpCode::Jump));
             self.patch_jump(over_then_jump);
-            self.emit_byte(OpCode::Pop as u8);
+            self.emit_byte(OpCode::Pop as u8, true);
         }
 
         // Pop the condition if we went to the else block
@@ -494,11 +500,11 @@ impl Compiler {
         let loop_start: usize = self.chunk.code.len();
         self.expression();
         let exit_jump: usize = self.emit_jump(OpCode::JumpIfFalse);
-        self.emit_byte(OpCode::Pop as u8);
+        self.emit_byte(OpCode::Pop as u8, true);
         self.statement();
         self.emit_loop(loop_start);
         self.patch_jump(exit_jump);
-        self.emit_byte(OpCode::Pop as u8);
+        self.emit_byte(OpCode::Pop as u8, true);
     }
 
     fn begin_scope(&mut self) {
@@ -509,7 +515,7 @@ impl Compiler {
         self.scope_depth -= 1;
         while !self.locals.is_empty() && self.locals.last().unwrap().depth > self.scope_depth as i32
         {
-            self.emit_byte(OpCode::Pop as u8);
+            self.emit_byte(OpCode::Pop as u8, true);
             self.locals.pop();
         }
     }
@@ -527,7 +533,7 @@ impl Compiler {
     fn expression_statement(&mut self) {
         self.expression();
         self.consume(TokenType::Semicolon, "Expected ';' after expression");
-        self.emit_byte(OpCode::Pop as u8);
+        self.emit_byte(OpCode::Pop as u8, true);
     }
 
     fn grouping(&mut self) {
@@ -565,7 +571,7 @@ impl Compiler {
         if self.match_(TokenType::Equal) {
             self.expression();
         } else {
-            self.emit_byte(OpCode::Null as u8);
+            self.emit_byte(OpCode::Null as u8, true);
         }
         self.emit_bytes(OpCode::DefineGlobal as u8, global);
         self.consume(
@@ -637,7 +643,7 @@ impl Compiler {
                     "Expected '=' after constant declaration (must be initialized)",
                 );
             }
-            self.emit_byte(OpCode::Null as u8);
+            self.emit_byte(OpCode::Null as u8, true);
         }
         self.locals.last_mut().unwrap().depth = self.scope_depth as i32;
         self.consume(
@@ -665,6 +671,7 @@ impl Compiler {
             function.start = self.chunk.code.len();
             self.chunk.code.append(&mut function.chunk.code);
             self.chunk.lines.append(&mut function.chunk.lines);
+            self.chunk.debug_code.append(&mut function.chunk.debug_code);
             self.chunk.constants[function.const_idx] = Value::Function(function.clone());
         }
     }
@@ -694,7 +701,7 @@ pub fn compile(input: &str) -> CompilerResult {
     while !parser.match_(TokenType::Eof) {
         parser.declaration();
     }
-    parser.emit_byte(OpCode::Eof as u8);
+    parser.emit_byte(OpCode::Eof as u8, true);
     parser.append_functions();
     if parser.error {
         CompilerResult::CompileError

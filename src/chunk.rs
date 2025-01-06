@@ -5,6 +5,7 @@ pub struct Chunk {
     pub code: Vec<u8>,
     pub lines: Vec<usize>,
     pub constants: Vec<Value>,
+    pub debug_code: Vec<String>,
 }
 
 impl Chunk {
@@ -13,6 +14,7 @@ impl Chunk {
             code: Vec::new(),
             lines: Vec::new(),
             constants: Vec::new(),
+            debug_code: Vec::new(),
         }
     }
 
@@ -90,6 +92,9 @@ impl Chunk {
     pub fn disassemble(&self, name: &str) {
         if !cfg!(feature = "debug_disassemble") {
             return;
+        }
+        if cfg!(feature = "debug_raw") {
+            println!("{}", self.debug_code.join("\n"));
         }
         println!("===== {} =====", name);
         let mut offset = 0;
