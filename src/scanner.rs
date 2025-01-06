@@ -35,7 +35,7 @@ pub enum TokenType {
     Else,
     Elseif,
     False,
-    Fun,
+    Fn,
     For,
     Global,
     If,
@@ -180,7 +180,7 @@ impl Scanner {
             "else" => Token::new(TokenType::Else, lexeme, self.line),
             "false" => Token::new(TokenType::False, lexeme, self.line),
             "for" => Token::new(TokenType::For, lexeme, self.line),
-            "fun" => Token::new(TokenType::Fun, lexeme, self.line),
+            "fn" => Token::new(TokenType::Fn, lexeme, self.line),
             "global" => Token::new(TokenType::Global, lexeme, self.line),
             "if" => {
                 if !self.tokens.is_empty()
@@ -368,8 +368,7 @@ mod tests {
 
     #[test]
     fn parses_keywords() {
-        let input =
-            "and class else false for fun if null or print return super this true var while";
+        let input = "and class else false for fn if null or print return super this true var while";
         let tokens: Vec<Token> = super::scan(input);
         let seen_types: HashSet<TokenType> = tokens.iter().map(|t| t.token_type).collect();
         assert_eq!(seen_types.len(), tokens.len());

@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt};
 
-use crate::{chunk::Chunk, compiler::OpCode};
+use crate::{chunk::Chunk, compiler::Function, compiler::OpCode};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value {
@@ -8,6 +8,7 @@ pub enum Value {
     Bool(bool),
     Null,
     String(String),
+    Function(Function),
 }
 
 #[allow(dead_code)]
@@ -20,12 +21,20 @@ impl Value {
         }
     }
 
+    pub fn as_function(&self) -> &Function {
+        match self {
+            Value::Function(f) => f,
+            _ => panic!("Expected function"),
+        }
+    }
+
     pub fn as_string(&self) -> String {
         match self {
             Value::Number(n) => n.to_string(),
             Value::Bool(b) => b.to_string(),
             Value::Null => "null".to_string(),
             Value::String(s) => s.to_string(),
+            Value::Function(f) => format!("<fn {} (start at {})>", f.name.lexeme, f.start),
         }
     }
 
@@ -197,6 +206,7 @@ impl VM {
             Value::Null => false,
             Value::Number(n) => *n != 0.0,
             Value::String(s) => !s.is_empty(),
+            Value::Function(_) => true,
         }
     }
 
@@ -300,11 +310,31 @@ impl VM {
                     let offset = self.read_short() as usize;
                     self.ip -= offset;
                 }
+                OpCode::Call => {
+                    let called = self.pop();
+                    match called {
+                        Value::Function(_) => {}
+                        _ => {
+                            self.runtime_error("Can only call functions");
+                            return VmResult::RuntimeError;
+                        }
+                    }
+                    let called = called.as_function();
+                    let next_instruction = self.ip;
+                    self.ip = called.start;
+                    self.push(Value::Number(next_instruction as f64));
+                }
                 OpCode::Print => println!("{}", self.pop()),
                 OpCode::Null => self.push(Value::Null),
                 OpCode::True => self.push(Value::Bool(true)),
                 OpCode::False => self.push(Value::Bool(false)),
                 OpCode::Return => {
+                    let returned_value = self.pop();
+                    let return_address = self.pop();
+                    self.ip = return_address.as_number() as usize;
+                    self.push(returned_value);
+                }
+                OpCode::Eof => {
                     return VmResult::OK;
                 }
             }

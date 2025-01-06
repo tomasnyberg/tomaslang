@@ -2,32 +2,32 @@
 /*
 // EXPECT MULTI
 ===== main =====
-0000    1 CONSTANT_OP         0 'Number(1.0)'
-0002    | CONSTANT_OP         1 'Number(5.0)'
-0004    | CONSTANT_OP         2 'Number(5.0)'
+0000    1 CONSTANT_OP         0 '1'
+0002    | CONSTANT_OP         1 '5'
+0004    | CONSTANT_OP         2 '5'
 0006    | MUL_OP
 0007    | ADD_OP
-0008    | CONSTANT_OP         3 'Number(3.0)'
+0008    | CONSTANT_OP         3 '3'
 0010    | SUB_OP
 0011    | POP_OP
-0012   34 RETURN_OP
-  
-0000    1 CONSTANT_OP         0 'Number(1.0)'
+0012   34 EOF_OP
+
+0000    1 CONSTANT_OP         0 '1'
           [ 1 ]
-0002    | CONSTANT_OP         1 'Number(5.0)'
+0002    | CONSTANT_OP         1 '5'
           [ 1 ][ 5 ]
-0004    | CONSTANT_OP         2 'Number(5.0)'
+0004    | CONSTANT_OP         2 '5'
           [ 1 ][ 5 ][ 5 ]
 0006    | MUL_OP
           [ 1 ][ 25 ]
 0007    | ADD_OP
           [ 26 ]
-0008    | CONSTANT_OP         3 'Number(3.0)'
+0008    | CONSTANT_OP         3 '3'
           [ 26 ][ 3 ]
 0010    | SUB_OP
           [ 23 ]
 0011    | POP_OP
 
-0012   34 RETURN_OP
+0012   34 EOF_OP
 // EXPECT MULTI END
 */

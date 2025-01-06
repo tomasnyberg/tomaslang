@@ -10,12 +10,26 @@ struct Compiler {
     rules: HashMap<TokenType, ParseRule>,
     locals: Vec<Local>,
     scope_depth: usize,
+    functions: Vec<Function>,
+    // If we are currently parsing a function, push to that functions chunk.
+    // That code will be put at the end of the whole file when compilation is done
+    // (see the append_functions method)
+    push_to_fn: i32,
 }
 
 struct Local {
     name: Token,
     depth: i32,
     constant: bool,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Function {
+    pub start: usize,
+    pub name: Token,
+    arity: u8,
+    chunk: Chunk,
+    const_idx: usize,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -40,6 +54,7 @@ pub enum OpCode {
     JumpIfTrue,
     Jump,
     Loop,
+    Call,
     Negate,
     Not,
     Pop,
@@ -48,6 +63,7 @@ pub enum OpCode {
     True,
     False,
     Return,
+    Eof,
 }
 
 #[derive(Copy, Clone, PartialOrd, PartialEq)]
@@ -119,14 +135,16 @@ impl OpCode {
             15 => OpCode::JumpIfTrue,
             16 => OpCode::Jump,
             17 => OpCode::Loop,
-            18 => OpCode::Negate,
-            19 => OpCode::Not,
-            20 => OpCode::Pop,
-            21 => OpCode::Print,
-            22 => OpCode::Null,
-            23 => OpCode::True,
-            24 => OpCode::False,
-            25 => OpCode::Return,
+            18 => OpCode::Call,
+            19 => OpCode::Negate,
+            20 => OpCode::Not,
+            21 => OpCode::Pop,
+            22 => OpCode::Print,
+            23 => OpCode::Null,
+            24 => OpCode::True,
+            25 => OpCode::False,
+            26 => OpCode::Return,
+            27 => OpCode::Eof,
             _ => panic!("unexpected opcode (did you update this match after adding an op?)"),
         }
     }
@@ -174,7 +192,7 @@ impl Compiler {
         rule(Class,        None,                  None,               Precedence::None);
         rule(Else,         None,                  None,               Precedence::None);
         rule(False,        Some(Self::literal),   None,               Precedence::None);
-        rule(Fun,          None,                  None,               Precedence::None);
+        rule(Fn,           None,                  None,               Precedence::None);
         rule(For,          None,                  None,               Precedence::None);
         rule(If,           None,                  None,               Precedence::None);
         rule(Null,         Some(Self::literal),   None,               Precedence::None);
@@ -203,6 +221,8 @@ impl Compiler {
             rules: Self::create_rules(),
             locals: Vec::new(),
             scope_depth: 0,
+            functions: Vec::new(),
+            push_to_fn: -1,
         }
     }
 
@@ -235,7 +255,9 @@ impl Compiler {
     }
 
     fn call(&mut self) {
-        self.error_at_current("Call not implemented");
+        // TODO: Arg count
+        self.emit_byte(OpCode::Call as u8);
+        self.consume(TokenType::RightParen, "Expected ')' after arguments");
     }
 
     fn literal(&mut self) {
@@ -323,9 +345,10 @@ impl Compiler {
         self.chunk.code[offset + 1] = (jump & 0xff) as u8;
     }
 
-    fn emit_constant(&mut self, value: Value) {
+    fn emit_constant(&mut self, value: Value) -> u8 {
         let index = self.make_constant(value);
         self.emit_bytes(OpCode::Constant as u8, index);
+        index
     }
 
     fn make_constant(&mut self, value: Value) -> u8 {
@@ -360,8 +383,14 @@ impl Compiler {
     }
 
     fn emit_byte(&mut self, byte: u8) {
-        self.chunk.code.push(byte);
-        self.chunk
+        // Push code to the functions chunk rather than the script
+        let chunk = if self.push_to_fn == -1 {
+            &mut self.chunk
+        } else {
+            &mut self.functions[self.push_to_fn as usize].chunk
+        };
+        chunk.code.push(byte);
+        chunk
             .lines
             .push(self.tokens[self.current - 1].line as usize);
     }
@@ -473,7 +502,6 @@ impl Compiler {
     }
 
     fn begin_scope(&mut self) {
-        self.consume(TokenType::LeftBrace, "Expected '{' to start block");
         self.scope_depth += 1;
     }
 
@@ -546,6 +574,39 @@ impl Compiler {
         );
     }
 
+    fn function_declaration(&mut self) {
+        self.consume(TokenType::Identifier, "Expected function name");
+        let name = self.tokens[self.current - 1].clone();
+        let start = self.chunk.code.len();
+        self.functions.push(Function {
+            chunk: Chunk::new(),
+            start,
+            name: name.clone(),
+            arity: 0,     // TODO: arity
+            const_idx: 0, // Initialized later
+        });
+        self.locals.push(Local {
+            name,
+            depth: self.scope_depth as i32,
+            constant: false,
+        });
+        self.push_to_fn += 1;
+        self.begin_scope();
+        self.consume(TokenType::LeftParen, "Expected '(' after function name");
+        self.consume(
+            TokenType::RightParen,
+            "Expected ')' after function arguments",
+        );
+        self.consume(TokenType::LeftBrace, "Expected '{' before function body");
+        self.block();
+        self.end_scope();
+        // TODO: Allow return value
+        self.emit_bytes(OpCode::Null as u8, OpCode::Return as u8);
+        self.push_to_fn -= 1;
+        let const_idx = self.emit_constant(Value::Function(self.functions.last().unwrap().clone()));
+        self.functions.last_mut().unwrap().const_idx = const_idx as usize;
+    }
+
     fn local_var_declaration(&mut self, constant: bool) {
         self.consume(TokenType::Identifier, "Expected variable name");
         let name = self.tokens[self.current - 1].clone();
@@ -592,8 +653,19 @@ impl Compiler {
         } else if self.match_(TokenType::Let) || self.match_(TokenType::Const) {
             let constant = self.tokens[self.current - 1].token_type == TokenType::Const;
             self.local_var_declaration(constant);
+        } else if self.match_(TokenType::Fn) {
+            self.function_declaration();
         } else {
             self.statement();
+        }
+    }
+
+    fn append_functions(&mut self) {
+        for function in self.functions.iter_mut() {
+            function.start = self.chunk.code.len();
+            self.chunk.code.append(&mut function.chunk.code);
+            self.chunk.lines.append(&mut function.chunk.lines);
+            self.chunk.constants[function.const_idx] = Value::Function(function.clone());
         }
     }
 
@@ -608,6 +680,7 @@ impl Compiler {
             TokenType::While => self.while_statement(),
             TokenType::LeftBrace => {
                 self.begin_scope();
+                self.consume(TokenType::LeftBrace, "Expected '{' to start block");
                 self.block();
                 self.end_scope();
             }
@@ -621,7 +694,8 @@ pub fn compile(input: &str) -> CompilerResult {
     while !parser.match_(TokenType::Eof) {
         parser.declaration();
     }
-    parser.emit_byte(OpCode::Return as u8);
+    parser.emit_byte(OpCode::Eof as u8);
+    parser.append_functions();
     if parser.error {
         CompilerResult::CompileError
     } else {
@@ -658,7 +732,7 @@ mod tests {
             1,
             OpCode::Add as u8,
             OpCode::Pop as u8,
-            OpCode::Return as u8,
+            OpCode::Eof as u8,
         ];
         chunk.disassemble("test");
         match_bytecode(&chunk, &expected);
@@ -680,7 +754,7 @@ mod tests {
             3,
             OpCode::Add as u8,
             OpCode::Pop as u8,
-            OpCode::Return as u8,
+            OpCode::Eof as u8,
         ];
         chunk.disassemble("test");
         match_bytecode(&chunk, &expected);
@@ -702,7 +776,7 @@ mod tests {
             3,
             OpCode::Sub as u8,
             OpCode::Pop as u8,
-            OpCode::Return as u8,
+            OpCode::Eof as u8,
         ];
         chunk.disassemble("test");
         match_bytecode(&chunk, &expected);
@@ -722,7 +796,7 @@ mod tests {
             0,
             OpCode::Negate as u8,
             OpCode::Pop as u8,
-            OpCode::Return as u8,
+            OpCode::Eof as u8,
         ];
         chunk.disassemble("test");
         match_bytecode(&chunk, &expected);
@@ -738,7 +812,7 @@ mod tests {
             OpCode::Pop as u8,
             OpCode::Null as u8,
             OpCode::Pop as u8,
-            OpCode::Return as u8,
+            OpCode::Eof as u8,
         ];
         chunk.disassemble("test");
         match_bytecode(&chunk, &expected);
@@ -751,7 +825,7 @@ mod tests {
             OpCode::Constant as u8,
             0,
             OpCode::Pop as u8,
-            OpCode::Return as u8,
+            OpCode::Eof as u8,
         ];
         chunk.disassemble("test");
         match_bytecode(&chunk, &expected);
@@ -768,7 +842,7 @@ mod tests {
             2, // Points to 1
             OpCode::DefineGlobal as u8,
             1, // Points to "b"
-            OpCode::Return as u8,
+            OpCode::Eof as u8,
         ];
         chunk.disassemble("test");
         match_bytecode(&chunk, &expected);
@@ -785,7 +859,7 @@ mod tests {
             OpCode::GetGlobal as u8,
             2, // Points to "a"
             OpCode::Print as u8,
-            OpCode::Return as u8,
+            OpCode::Eof as u8,
         ];
         chunk.disassemble("test");
         match_bytecode(&chunk, &expected);
@@ -807,7 +881,7 @@ mod tests {
             OpCode::GetGlobal as u8,
             4, // Points to "a"
             OpCode::Print as u8,
-            OpCode::Return as u8,
+            OpCode::Eof as u8,
         ];
         chunk.disassemble("test");
         match_bytecode(&chunk, &expected);
@@ -825,7 +899,7 @@ mod tests {
             OpCode::GetLocal as u8,
             0, // Points to "a"
             OpCode::Print as u8,
-            OpCode::Return as u8,
+            OpCode::Eof as u8,
         ];
         chunk.disassemble("test");
         match_bytecode(&chunk, &expected);
@@ -843,7 +917,7 @@ mod tests {
             1, // inner a should be printed
             OpCode::Print as u8,
             OpCode::Pop as u8, // End the scope
-            OpCode::Return as u8,
+            OpCode::Eof as u8,
         ];
         chunk.disassemble("test");
         match_bytecode(&chunk, &expected);
@@ -858,7 +932,7 @@ mod tests {
             OpCode::GetLocal as u8,
             0, // Points to "a"
             OpCode::Print as u8,
-            OpCode::Return as u8,
+            OpCode::Eof as u8,
         ];
         chunk.disassemble("test");
         match_bytecode(&chunk, &expected);
@@ -887,8 +961,8 @@ mod tests {
             OpCode::Jump as u8, // Jump 2 FROM
             0x0,
             0x1,
-            OpCode::Pop as u8,    // Jump 1 TO
-            OpCode::Return as u8, // Jump 2 TO
+            OpCode::Pop as u8, // Jump 1 TO
+            OpCode::Eof as u8, // Jump 2 TO
         ];
         chunk.disassemble("test");
         match_bytecode(&chunk, &expected);
@@ -913,7 +987,7 @@ mod tests {
             OpCode::Constant as u8,
             1,
             OpCode::Print as u8,
-            OpCode::Return as u8, // Jump 2 TO
+            OpCode::Eof as u8, // Jump 2 TO
         ];
         chunk.disassemble("test");
         match_bytecode(&chunk, &expected);
@@ -955,7 +1029,7 @@ mod tests {
             0x0,
             0x1,
             OpCode::Pop as u8,
-            OpCode::Return as u8,
+            OpCode::Eof as u8,
         ];
         chunk.disassemble("test");
         match_bytecode(&chunk, &expected);
@@ -989,7 +1063,7 @@ mod tests {
             0x0,
             0x15,
             OpCode::Pop as u8,
-            OpCode::Return as u8,
+            OpCode::Eof as u8,
         ];
         chunk.disassemble("test");
         match_bytecode(&chunk, &expected);

@@ -1,6 +1,6 @@
 use crate::{compiler::OpCode, vm::Value};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Chunk {
     pub code: Vec<u8>,
     pub lines: Vec<usize>,
@@ -19,7 +19,7 @@ impl Chunk {
     fn constant_instruction(&self, name: &str, offset: usize) -> usize {
         let constant = self.code[offset + 1];
         print!("{:16} {:4} '", name, constant);
-        print!("{:?}", self.constants[constant as usize]);
+        print!("{}", self.constants[constant as usize]);
         println!("'");
         offset + 2
     }
@@ -74,6 +74,7 @@ impl Chunk {
             OpCode::JumpIfTrue => self.jump_instruction("JUMP_IF_TRUE_OP", 1, offset),
             OpCode::Jump => self.jump_instruction("JUMP_OP", 1, offset),
             OpCode::Loop => self.jump_instruction("LOOP_OP", -1, offset),
+            OpCode::Call => self.simple_instruction("CALL_OP", offset),
             OpCode::Negate => self.simple_instruction("NEGATE_OP", offset),
             OpCode::Not => self.simple_instruction("NOT_OP", offset),
             OpCode::Pop => self.simple_instruction("POP_OP", offset),
@@ -82,6 +83,7 @@ impl Chunk {
             OpCode::True => self.simple_instruction("TRUE_OP", offset),
             OpCode::False => self.simple_instruction("FALSE_OP", offset),
             OpCode::Return => self.simple_instruction("RETURN_OP", offset),
+            OpCode::Eof => self.simple_instruction("EOF_OP", offset),
         }
     }
 

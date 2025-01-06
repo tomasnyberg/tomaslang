@@ -1,0 +1,5 @@
+// EXPECT Hi from function
+fn printfun() {
+  print "Hi from function";
+}
+printfun();
