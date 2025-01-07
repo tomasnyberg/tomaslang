@@ -536,8 +536,13 @@ impl Compiler {
         self.scope_depth += 1;
     }
 
-    fn end_scope(&mut self) {
+    fn end_scope(&mut self, end_func: bool) {
         self.scope_depth -= 1;
+        // If this is just ending a function, we don't emit pops.
+        // The local variables are instead popped in the VM at runtime with a return op.
+        if end_func {
+            return;
+        }
         let locals = &mut self.compiling_funcs.last_mut().unwrap().locals;
         let mut pops = 0;
         while !locals.is_empty() && locals.last().unwrap().depth > self.scope_depth as i32 {
@@ -645,7 +650,7 @@ impl Compiler {
         );
         self.consume(TokenType::LeftBrace, "Expected '{' before function body");
         self.block();
-        self.end_scope();
+        self.end_scope(true);
         // TODO: Allow return value
         self.emit_bytes(OpCode::Null as u8, OpCode::Return as u8);
         self.compiled_funcs
@@ -745,7 +750,7 @@ impl Compiler {
                 self.begin_scope();
                 self.consume(TokenType::LeftBrace, "Expected '{' to start block");
                 self.block();
-                self.end_scope();
+                self.end_scope(false);
             }
             _ => self.expression_statement(),
         }

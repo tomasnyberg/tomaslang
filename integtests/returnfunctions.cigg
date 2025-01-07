@@ -1,0 +1,33 @@
+// EXPECT 1\n5\n10\n10
+fn returnf() {
+  fn f() {
+    return 1;
+  }
+  return f;
+}
+let newf = returnf();
+print newf();
+
+fn f() {
+  fn g() {
+    fn h() {
+      fn j() {
+        return 5;
+      }
+      return j;
+    }
+    return h;
+  }
+  return g;
+}
+newf = f;
+print newf()()()();
+
+// Not sure if we want this? XD
+fn returnmyself() {
+  print 10;
+  return returnmyself;
+}
+
+f = returnmyself();
+f();

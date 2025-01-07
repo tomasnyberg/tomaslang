@@ -1,0 +1,8 @@
+// EXPECT 5
+fn f() {
+  let x = 5;
+  let y = 6;
+  let z = 7;
+  return x;
+}
+print f();

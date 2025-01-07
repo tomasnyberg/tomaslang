@@ -344,7 +344,11 @@ impl VM {
                 OpCode::False => self.push(Value::Bool(false)),
                 OpCode::Return => {
                     let returned_value = self.pop();
-                    self.pop(); // Pop function
+                    let frame_start = self.frame_starts.pop().unwrap();
+                    // Clear the functions locals
+                    while self.stack.len() > frame_start {
+                        self.pop();
+                    }
                     let return_address = self.pop();
                     match return_address {
                         Value::ReturnAddress(ip) => self.ip = ip,
@@ -354,7 +358,6 @@ impl VM {
                         }
                     }
                     self.push(returned_value);
-                    self.frame_starts.pop();
                 }
                 OpCode::Eof => {
                     return VmResult::OK;
