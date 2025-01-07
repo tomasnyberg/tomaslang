@@ -447,7 +447,6 @@ impl Compiler {
             TokenType::BangEqual => self.emit_byte(OpCode::NotEqual as u8, true),
             TokenType::Greater => self.emit_byte(OpCode::Greater as u8, true),
             TokenType::GreaterEqual => self.emit_byte(OpCode::GreaterEqual as u8, true),
-            // TODO PERF: dedicated ops for these
             TokenType::Less => self.emit_bytes(OpCode::GreaterEqual as u8, OpCode::Not as u8),
             TokenType::LessEqual => self.emit_bytes(OpCode::Greater as u8, OpCode::Not as u8),
             _ => self.error_at_current("Expected binary operator"),
@@ -579,7 +578,6 @@ impl Compiler {
         self.advance();
         let prefix_rule = self.rules[&self.tokens[self.current - 1].token_type].prefix;
         if prefix_rule.is_none() {
-            // TODO: Erroring at the correct token?
             self.error_at_current("Expected expression");
             return;
         }
@@ -651,7 +649,6 @@ impl Compiler {
         self.consume(TokenType::LeftBrace, "Expected '{' before function body");
         self.block();
         self.end_scope(true);
-        // TODO: Allow return value
         self.emit_bytes(OpCode::Null as u8, OpCode::Return as u8);
         self.compiled_funcs
             .push(self.compiling_funcs.pop().unwrap());
@@ -739,7 +736,6 @@ impl Compiler {
 
     fn statement(&mut self) {
         let curr_type = self.tokens[self.current].token_type;
-        // TODO: Remember to move past the token (except for in expression)
         match curr_type {
             TokenType::Print => self.print_statement(),
             TokenType::For => self.for_statement(),
