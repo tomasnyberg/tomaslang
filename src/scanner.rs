@@ -12,6 +12,7 @@ pub enum TokenType {
     RightBrace,
     Comma,
     Dot,
+    DotDot,
     Minus,
     Plus,
     Semicolon,
@@ -246,12 +247,19 @@ impl Scanner {
             '[' => Token::new(TokenType::LeftBracket, String::from("["), self.line),
             ']' => Token::new(TokenType::RightBracket, String::from("]"), self.line),
             ',' => Token::new(TokenType::Comma, String::from(","), self.line),
-            '.' => Token::new(TokenType::Dot, String::from("."), self.line),
             '-' => Token::new(TokenType::Minus, String::from("-"), self.line),
             '+' => Token::new(TokenType::Plus, String::from("+"), self.line),
             ';' => Token::new(TokenType::Semicolon, String::from(";"), self.line),
             '*' => Token::new(TokenType::Star, String::from("*"), self.line),
             '/' => Token::new(TokenType::Slash, String::from("/"), self.line),
+            '.' => {
+                if self.peek() == '.' {
+                    self.advance();
+                    Token::new(TokenType::DotDot, String::from(".."), self.line)
+                } else {
+                    Token::new(TokenType::Dot, String::from("."), self.line)
+                }
+            }
             '!' => {
                 if self.peek() == '=' {
                     self.advance();
@@ -499,6 +507,21 @@ mod tests {
             TokenType::BangEqual,
             TokenType::Less,
             TokenType::Greater,
+            TokenType::Eof,
+        ];
+        verify_output(tokens, expected);
+    }
+
+    #[test]
+    fn parses_dotdots() {
+        let input = ".. . 5..10";
+        let tokens: Vec<Token> = super::scan(input);
+        let expected = vec![
+            TokenType::DotDot,
+            TokenType::Dot,
+            TokenType::Number,
+            TokenType::DotDot,
+            TokenType::Number,
             TokenType::Eof,
         ];
         verify_output(tokens, expected);
