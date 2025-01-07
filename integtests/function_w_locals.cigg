@@ -1,0 +1,18 @@
+// EXPECT 5\n110\n100\n10
+global ten = 10;
+fn f() {
+  let x = 5;
+  print x;
+  fn g() {
+    let y = 100;
+    print y + ten;
+    y = y - 10;
+    print y + ten;
+  }
+
+  g();
+  g = 5;
+  print x + g;
+}
+
+f();

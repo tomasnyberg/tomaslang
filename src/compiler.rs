@@ -1,10 +1,11 @@
-use std::{collections::HashMap, ops::Shr};
+use std::collections::HashMap;
+use std::ops::Shr;
 
 use crate::{chunk::*, scanner::*, vm::Value};
 
 macro_rules! active_chunk {
     ($this:expr) => {
-        &mut $this.compiling_chunks.last_mut().unwrap()
+        &mut $this.compiling_funcs.last_mut().unwrap().chunk
     };
 }
 
@@ -12,14 +13,13 @@ struct Compiler {
     tokens: Vec<Token>,
     current: usize,
     error: bool,
-    compiling_chunks: Vec<Chunk>,
-    compiled_chunks: Vec<Chunk>,
+    compiling_funcs: Vec<Function>,
+    compiled_funcs: Vec<Function>,
     rules: HashMap<TokenType, ParseRule>,
-    locals: Vec<Local>,
     scope_depth: usize,
-    functions: Vec<Function>,
 }
 
+#[derive(Debug, Clone, PartialEq)]
 struct Local {
     name: Token,
     depth: i32,
@@ -30,6 +30,8 @@ struct Local {
 pub struct Function {
     pub start: usize,
     pub name: Token,
+    pub chunk: Chunk,
+    locals: Vec<Local>,
     arity: u8,
     const_idx: usize,
 }
@@ -214,17 +216,23 @@ impl Compiler {
 
     pub fn new(input: &str) -> Self {
         let tokens = scan(input);
+        let mainfn = Function {
+            start: 0,
+            name: Token::new(TokenType::Eof, "main".to_string(), 0),
+            chunk: Chunk::new(),
+            locals: Vec::new(),
+            arity: 0,
+            const_idx: 0,
+        };
 
         Self {
             tokens,
             current: 0,
             error: false,
-            compiling_chunks: vec![Chunk::new()],
-            compiled_chunks: Vec::new(),
+            compiling_funcs: vec![mainfn],
+            compiled_funcs: Vec::new(),
             rules: Self::create_rules(),
-            locals: Vec::new(),
             scope_depth: 0,
-            functions: Vec::new(),
         }
     }
 
@@ -272,7 +280,8 @@ impl Compiler {
     }
 
     fn resolve_local(&mut self, name: &Token) -> Option<u8> {
-        for (i, local) in self.locals.iter().enumerate().rev() {
+        let locals = &self.compiling_funcs.last().unwrap().locals;
+        for (i, local) in locals.iter().enumerate().rev() {
             if name.lexeme == local.name.lexeme {
                 if local.depth == -1 {
                     self.error_at_current("Cannot read local variable in its own initializer");
@@ -300,7 +309,9 @@ impl Compiler {
             get_op = OpCode::GetGlobal;
         }
         if self.match_(TokenType::Equal) {
-            if resolved.is_some() && self.locals[arg as usize].constant {
+            if resolved.is_some()
+                && self.compiling_funcs.last().unwrap().locals[arg as usize].constant
+            {
                 self.error_at_current("Cannot assign to constant variable");
             }
             self.expression();
@@ -358,7 +369,7 @@ impl Compiler {
     }
 
     fn make_constant(&mut self, value: Value) -> u8 {
-        let first_chunk = &mut self.compiling_chunks[0];
+        let first_chunk = &mut self.compiling_funcs[0].chunk;
         let index: u8 = first_chunk.constants.len() as u8;
         first_chunk.constants.push(value);
         if first_chunk.constants.len() > 256 {
@@ -517,10 +528,14 @@ impl Compiler {
 
     fn end_scope(&mut self) {
         self.scope_depth -= 1;
-        while !self.locals.is_empty() && self.locals.last().unwrap().depth > self.scope_depth as i32
-        {
+        let locals = &mut self.compiling_funcs.last_mut().unwrap().locals;
+        let mut pops = 0;
+        while !locals.is_empty() && locals.last().unwrap().depth > self.scope_depth as i32 {
+            locals.pop();
+            pops += 1;
+        }
+        for _ in 0..pops {
             self.emit_byte(OpCode::Pop as u8, true);
-            self.locals.pop();
         }
     }
 
@@ -588,18 +603,30 @@ impl Compiler {
         self.consume(TokenType::Identifier, "Expected function name");
         let name = self.tokens[self.current - 1].clone();
         let start = active_chunk!(self).code.len();
-        self.functions.push(Function {
+        let mut new_func = Function {
             start,
             name: name.clone(),
+            chunk: Chunk::new(),
+            locals: Vec::new(),
             arity: 0,     // TODO: arity
             const_idx: 0, // Initialized later
-        });
-        self.locals.push(Local {
+        };
+        let const_idx = self.emit_constant(Value::Function(new_func.clone()));
+        new_func.const_idx = const_idx as usize;
+        // This function becomes a local variable in the surrounding function scope
+        let prev_locals = &mut self.compiling_funcs.last_mut().unwrap().locals;
+        prev_locals.push(Local {
             name,
-            depth: self.scope_depth as i32,
+            depth: self.scope_depth as i32, // Is this correct?
             constant: false,
         });
-        self.compiling_chunks.push(Chunk::new());
+        // A function wants to be able to access itself as well
+        new_func.locals.push(Local {
+            name: new_func.name.clone(),
+            depth: self.scope_depth as i32,
+            constant: true,
+        });
+        self.compiling_funcs.push(new_func);
         self.begin_scope();
         self.consume(TokenType::LeftParen, "Expected '(' after function name");
         self.consume(
@@ -611,29 +638,32 @@ impl Compiler {
         self.end_scope();
         // TODO: Allow return value
         self.emit_bytes(OpCode::Null as u8, OpCode::Return as u8);
-        self.compiled_chunks
-            .push(self.compiling_chunks.pop().unwrap());
-        let const_idx = self.emit_constant(Value::Function(self.functions.last().unwrap().clone()));
-        self.functions.last_mut().unwrap().const_idx = const_idx as usize;
+        self.compiled_funcs
+            .push(self.compiling_funcs.pop().unwrap());
     }
 
     fn local_var_declaration(&mut self, constant: bool) {
         self.consume(TokenType::Identifier, "Expected variable name");
         let name = self.tokens[self.current - 1].clone();
-        for local in self.locals.iter().rev() {
-            if local.depth != self.scope_depth as i32 {
-                break;
-            }
-            if name.lexeme == local.name.lexeme {
-                self.error_at_current("Variable with this name already declared in this scope");
-                break;
-            }
+        let duplicate_exists: bool =
+            self.compiling_funcs
+                .last()
+                .unwrap()
+                .locals
+                .iter()
+                .any(|local| {
+                    local.name.lexeme == name.lexeme && self.scope_depth as i32 == local.depth
+                });
+        if duplicate_exists {
+            self.error_at_current("Variable with this name already declared in this scope");
         }
-        if self.locals.len() == 256 {
+        let locals = &mut self.compiling_funcs.last_mut().unwrap().locals;
+        if locals.len() == 256 {
             self.error_at_current("Too many local variables :(");
             return;
         }
-        self.locals.push(Local {
+        // TODO: We should not push this if a duplicate was found?
+        locals.push(Local {
             name,
             depth: -1, // Maybe -1 to avoid let a = a?
             constant,
@@ -649,7 +679,8 @@ impl Compiler {
             }
             self.emit_byte(OpCode::Null as u8, true);
         }
-        self.locals.last_mut().unwrap().depth = self.scope_depth as i32;
+        let locals = &mut self.compiling_funcs.last_mut().unwrap().locals;
+        locals.last_mut().unwrap().depth = self.scope_depth as i32;
         self.consume(
             TokenType::Semicolon,
             "Expected ';' after variable declaration",
@@ -672,24 +703,23 @@ impl Compiler {
 
     fn append_functions(&mut self) {
         assert_eq!(
-            self.compiling_chunks.len(),
+            self.compiling_funcs.len(),
             1,
             "Expected only one chunk (the script)"
         );
         // Put all the function code after the Eof
-        let mut final_chunk = self.compiling_chunks.pop().unwrap();
-        for (chunk, func) in self
-            .compiled_chunks
-            .iter_mut()
-            .zip(self.functions.iter_mut())
-        {
-            func.start = final_chunk.code.len();
-            final_chunk.constants[func.const_idx] = Value::Function(func.clone());
-            final_chunk.code.append(&mut chunk.code);
-            final_chunk.lines.append(&mut chunk.lines);
-            final_chunk.debug_code.append(&mut chunk.debug_code);
+        let mut main_func = self.compiling_funcs.pop().unwrap();
+        for func in self.compiled_funcs.iter_mut() {
+            func.start = main_func.chunk.code.len();
+            main_func.chunk.constants[func.const_idx] = Value::Function(func.clone());
+            main_func.chunk.code.append(&mut func.chunk.code);
+            main_func.chunk.lines.append(&mut func.chunk.lines);
+            main_func
+                .chunk
+                .debug_code
+                .append(&mut func.chunk.debug_code);
         }
-        self.compiled_chunks = vec![final_chunk];
+        self.compiled_funcs = vec![main_func];
     }
 
     fn statement(&mut self) {
@@ -722,7 +752,7 @@ pub fn compile(input: &str) -> CompilerResult {
     if parser.error {
         CompilerResult::CompileError
     } else {
-        CompilerResult::Chunk(parser.compiled_chunks.pop().unwrap())
+        CompilerResult::Chunk(parser.compiled_funcs.pop().unwrap().chunk)
     }
 }
 

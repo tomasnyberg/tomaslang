@@ -67,6 +67,7 @@ pub struct VM {
     chunk: Chunk,
     had_runtime_error: bool,
     globals: HashMap<String, Value>,
+    frame_starts: Vec<usize>,
 }
 
 impl VM {
@@ -77,6 +78,7 @@ impl VM {
             chunk,
             had_runtime_error: false,
             globals: HashMap::new(),
+            frame_starts: vec![0],
         }
     }
 
@@ -102,6 +104,11 @@ impl VM {
         let byte = self.chunk.code[self.ip];
         self.ip += 1;
         byte
+    }
+
+    fn local_idx_on_stack(&mut self) -> usize {
+        let position = self.read_byte();
+        position as usize + self.frame_starts.last().unwrap()
     }
 
     fn read_short(&mut self) -> u16 {
@@ -286,14 +293,14 @@ impl VM {
                     self.globals.insert(name, value);
                 }
                 OpCode::GetLocal => {
-                    let position = self.read_byte();
-                    let value = self.stack[position as usize].clone();
+                    let idx = self.local_idx_on_stack();
+                    let value = self.stack[idx].clone();
                     self.push(value);
                 }
                 OpCode::SetLocal => {
-                    let position = self.read_byte();
+                    let idx = self.local_idx_on_stack();
                     let value = self.peek(0).clone();
-                    self.stack[position as usize] = value;
+                    self.stack[idx] = value;
                 }
                 OpCode::JumpIfFalse => {
                     let offset = self.read_short() as usize;
@@ -317,7 +324,7 @@ impl VM {
                 }
                 OpCode::Call => {
                     let called = self.pop();
-                    let called = match called {
+                    let called_fn = match called {
                         Value::Function(_) => called.as_function(),
                         _ => {
                             self.runtime_error("Can only call functions");
@@ -325,8 +332,11 @@ impl VM {
                         }
                     };
                     let return_address = Value::ReturnAddress(self.ip);
-                    self.ip = called.start;
+                    self.ip = called_fn.start;
                     self.push(return_address);
+                    self.frame_starts.push(self.stack.len());
+                    // Push fn back on stack so a fn has a reference to itself (0th local)
+                    self.push(called);
                 }
                 OpCode::Print => println!("{}", self.pop()),
                 OpCode::Null => self.push(Value::Null),
@@ -334,6 +344,7 @@ impl VM {
                 OpCode::False => self.push(Value::Bool(false)),
                 OpCode::Return => {
                     let returned_value = self.pop();
+                    self.pop(); // Pop function
                     let return_address = self.pop();
                     match return_address {
                         Value::ReturnAddress(ip) => self.ip = ip,
@@ -343,6 +354,7 @@ impl VM {
                         }
                     }
                     self.push(returned_value);
+                    self.frame_starts.pop();
                 }
                 OpCode::Eof => {
                     return VmResult::OK;
