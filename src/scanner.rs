@@ -40,6 +40,7 @@ pub enum TokenType {
     For,
     Global,
     If,
+    In,
     Null,
     Or,
     Print,
@@ -193,6 +194,7 @@ impl Scanner {
                     Token::new(TokenType::If, lexeme, self.line)
                 }
             }
+            "in" => Token::new(TokenType::In, lexeme, self.line),
             "null" => Token::new(TokenType::Null, lexeme, self.line),
             "or" => Token::new(TokenType::Or, lexeme, self.line),
             "print" => Token::new(TokenType::Print, lexeme, self.line),
@@ -519,6 +521,22 @@ mod tests {
         let expected = vec![
             TokenType::DotDot,
             TokenType::Dot,
+            TokenType::Number,
+            TokenType::DotDot,
+            TokenType::Number,
+            TokenType::Eof,
+        ];
+        verify_output(tokens, expected);
+    }
+
+    #[test]
+    fn parses_in() {
+        let input = "for i in 0..10";
+        let tokens = super::scan(input);
+        let expected = vec![
+            TokenType::For,
+            TokenType::Identifier,
+            TokenType::In,
             TokenType::Number,
             TokenType::DotDot,
             TokenType::Number,
