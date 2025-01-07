@@ -506,7 +506,17 @@ impl Compiler {
     }
 
     fn return_statement(&mut self) {
-        panic!("Return statement not implemented");
+        self.consume(
+            TokenType::Return,
+            "Expected 'return' to start return statement",
+        );
+        if self.match_(TokenType::Semicolon) {
+            self.emit_bytes(OpCode::Null as u8, OpCode::Return as u8);
+            return;
+        }
+        self.expression();
+        self.consume(TokenType::Semicolon, "Expected ';' after return value");
+        self.emit_byte(OpCode::Return as u8, true);
     }
 
     fn while_statement(&mut self) {

@@ -1,0 +1,20 @@
+// EXPECT 5\nnull\nhej hopp:)\n15
+fn f() {
+  return 5;
+}
+
+fn g() {
+  return;
+  print 5;
+}
+
+fn h() {
+  print "hej hopp:)";
+  return 10;
+}
+
+print f();
+print g();
+print f() + h();
+
+
