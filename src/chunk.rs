@@ -81,6 +81,7 @@ impl Chunk {
             OpCode::Not => self.simple_instruction("NOT_OP", offset),
             OpCode::Pop => self.simple_instruction("POP_OP", offset),
             OpCode::Print => self.simple_instruction("PRINT_OP", offset),
+            OpCode::Range => self.simple_instruction("RANGE_OP", offset),
             OpCode::Null => self.simple_instruction("NULL_OP", offset),
             OpCode::True => self.simple_instruction("TRUE_OP", offset),
             OpCode::False => self.simple_instruction("FALSE_OP", offset),

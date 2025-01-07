@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt};
 
-use crate::{chunk::Chunk, compiler::Function, compiler::OpCode};
+use crate::{chunk::Chunk, compiler::Function, compiler::OpCode, compiler::Range};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value {
@@ -9,6 +9,7 @@ pub enum Value {
     Null,
     String(String),
     Function(Function),
+    Range(Range),
     ReturnAddress(usize),
 }
 
@@ -36,6 +37,7 @@ impl Value {
             Value::Null => "null".to_string(),
             Value::String(s) => s.to_string(),
             Value::Function(f) => format!("<fn {} (starts at {})>", f.name.lexeme, f.start),
+            Value::Range(r) => format!("R {}..{}", r.start, r.end),
             Value::ReturnAddress(x) => format!("RA {x}"),
         }
     }
@@ -220,6 +222,7 @@ impl VM {
             Value::Number(n) => *n != 0.0,
             Value::String(s) => !s.is_empty(),
             Value::Function(_) => true,
+            Value::Range(_) => true,
             Value::ReturnAddress(_) => {
                 panic!("Return address should not be possible to evaluate for truth")
             }
@@ -350,6 +353,12 @@ impl VM {
                     self.frame_starts.push(self.stack.len() - arg_c - 1);
                 }
                 OpCode::Print => println!("{}", self.pop()),
+                OpCode::Range => {
+                    let end = self.pop().as_number() as i32;
+                    let start = self.pop().as_number() as i32;
+                    let range = Value::Range(Range::new(start, end));
+                    self.push(range);
+                }
                 OpCode::Null => self.push(Value::Null),
                 OpCode::True => self.push(Value::Bool(true)),
                 OpCode::False => self.push(Value::Bool(false)),

@@ -36,6 +36,25 @@ pub struct Function {
     const_idx: usize,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct Range {
+    pub start: i32,
+    pub end: i32,
+    pub current: i32,
+    pub step: i32,
+}
+
+impl Range {
+    pub fn new(start: i32, end: i32) -> Self {
+        Self {
+            start,
+            end,
+            current: start,
+            step: if start < end { 1 } else { -1 },
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[repr(u8)]
 #[allow(dead_code)]
@@ -63,6 +82,7 @@ pub enum OpCode {
     Not,
     Pop,
     Print,
+    Range,
     Null,
     True,
     False,
@@ -144,11 +164,12 @@ impl OpCode {
             20 => OpCode::Not,
             21 => OpCode::Pop,
             22 => OpCode::Print,
-            23 => OpCode::Null,
-            24 => OpCode::True,
-            25 => OpCode::False,
-            26 => OpCode::Return,
-            27 => OpCode::Eof,
+            23 => OpCode::Range,
+            24 => OpCode::Null,
+            25 => OpCode::True,
+            26 => OpCode::False,
+            27 => OpCode::Return,
+            28 => OpCode::Eof,
             _ => panic!("unexpected opcode (did you update this match after adding an op?)"),
         }
     }
@@ -176,6 +197,8 @@ impl Compiler {
         rule(RightBrace,   None,                  None,               Precedence::None);
         rule(Comma,        None,                  None,               Precedence::None);
         rule(Dot,          None,                  None,               Precedence::None);
+        // Is precedence correct here? Not sure.
+        rule(DotDot,       None,                  Some(Self::range),  Precedence::Term);
         rule(Minus,        Some(Self::unary),     Some(Self::binary), Precedence::Term);
         rule(Plus,         None,                  Some(Self::binary), Precedence::Term);
         rule(Semicolon,    None,                  None,               Precedence::None);
@@ -449,6 +472,11 @@ impl Compiler {
         self.emit_byte(OpCode::Pop as u8, true);
         self.parse_precedence(Precedence::Or);
         self.patch_jump(end_jump);
+    }
+
+    fn range(&mut self) {
+        self.expression();
+        self.emit_byte(OpCode::Range as u8, true);
     }
 
     fn binary(&mut self) {
@@ -1169,5 +1197,21 @@ mod tests {
         compile_to_chunk("fn a() { print 1; }");
         compile_to_chunk("fn f(a, b, c) { return a + b + c; }");
         compile_to_chunk("fn f(a, b, c) { fn g() { return 1; } }");
+    }
+
+    #[test]
+    fn can_construct_ranges() {
+        let chunk: Chunk = compile_to_chunk("1..10;");
+        let expected = [
+            OpCode::Constant as u8,
+            0,
+            OpCode::Constant as u8,
+            1,
+            OpCode::Range as u8,
+            OpCode::Pop as u8,
+            OpCode::Eof as u8,
+        ];
+        chunk.disassemble("test");
+        match_bytecode(&chunk, &expected);
     }
 }
