@@ -1,0 +1,24 @@
+// EXPECT 10\n6\n10\n83.72727272727273
+fn f(x) {
+  print x;
+}
+f(10);
+
+fn sumthree(x, y, z) {
+  return x + y + z;
+}
+
+print sumthree(1, 2, 3);
+
+fn firstclass(f) {
+  return f(10);
+}
+
+// Functions should be able to be passed as values
+firstclass(f);
+
+fn manyargs(a,b,c,d,e,f,g,h,i,j,k,l) {
+  return a * b - c * d + (e + f + g * (h - i * j / k + (l)));
+}
+
+print manyargs(1,2,3,4,5,6,7,8,9,10,11,12);

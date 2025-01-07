@@ -100,6 +100,10 @@ impl VM {
         self.stack.push(value);
     }
 
+    fn insert(&mut self, value: Value, index: usize) {
+        self.stack.insert(index, value);
+    }
+
     fn read_byte(&mut self) -> u8 {
         let byte = self.chunk.code[self.ip];
         self.ip += 1;
@@ -323,7 +327,8 @@ impl VM {
                     self.ip -= offset;
                 }
                 OpCode::Call => {
-                    let called = self.pop();
+                    let arg_c = self.pop().as_number() as usize;
+                    let called = self.peek(arg_c);
                     let called_fn = match called {
                         Value::Function(_) => called.as_function(),
                         _ => {
@@ -333,10 +338,9 @@ impl VM {
                     };
                     let return_address = Value::ReturnAddress(self.ip);
                     self.ip = called_fn.start;
-                    self.push(return_address);
-                    self.frame_starts.push(self.stack.len());
-                    // Push fn back on stack so a fn has a reference to itself (0th local)
-                    self.push(called);
+                    // TODO PERF: don't really like the idea of inserting with an offset
+                    self.insert(return_address, self.stack.len() - arg_c - 1);
+                    self.frame_starts.push(self.stack.len() - arg_c - 1);
                 }
                 OpCode::Print => println!("{}", self.pop()),
                 OpCode::Null => self.push(Value::Null),

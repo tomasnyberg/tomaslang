@@ -244,6 +244,10 @@ impl Compiler {
         self.error_at_current(message);
     }
 
+    fn check(&mut self, token_type: TokenType) -> bool {
+        self.tokens[self.current].token_type == token_type
+    }
+
     fn error_at_current(&mut self, message: &str) {
         if self.error {
             return;
@@ -264,10 +268,23 @@ impl Compiler {
         false
     }
 
+    fn argument_list(&mut self) -> u8 {
+        let mut arg_c = 0;
+        while !self.check(TokenType::RightParen) {
+            self.expression();
+            arg_c += 1;
+            if !self.match_(TokenType::Comma) {
+                break;
+            }
+        }
+        arg_c
+    }
+
     fn call(&mut self) {
-        // TODO: Arg count
-        self.emit_byte(OpCode::Call as u8, true);
+        let arg_c = self.argument_list();
+        self.emit_constant(Value::Number(arg_c as f64));
         self.consume(TokenType::RightParen, "Expected ')' after arguments");
+        self.emit_byte(OpCode::Call as u8, true);
     }
 
     fn literal(&mut self) {
@@ -621,7 +638,7 @@ impl Compiler {
             name: name.clone(),
             chunk: Chunk::new(),
             locals: Vec::new(),
-            arity: 0,     // TODO: arity
+            arity: 0,
             const_idx: 0, // Initialized later
         };
         let const_idx = self.emit_constant(Value::Function(new_func.clone()));
@@ -642,6 +659,17 @@ impl Compiler {
         self.compiling_funcs.push(new_func);
         self.begin_scope();
         self.consume(TokenType::LeftParen, "Expected '(' after function name");
+        if !self.check(TokenType::RightParen) {
+            let mut arity = 0;
+            while !self.check(TokenType::RightParen) {
+                self.local_var_declaration(false, true);
+                arity += 1;
+                if !self.match_(TokenType::Comma) {
+                    break;
+                }
+            }
+            self.compiling_funcs.last_mut().unwrap().arity = arity;
+        }
         self.consume(
             TokenType::RightParen,
             "Expected ')' after function arguments",
@@ -654,7 +682,7 @@ impl Compiler {
             .push(self.compiling_funcs.pop().unwrap());
     }
 
-    fn local_var_declaration(&mut self, constant: bool) {
+    fn local_var_declaration(&mut self, constant: bool, parameter: bool) {
         self.consume(TokenType::Identifier, "Expected variable name");
         let name = self.tokens[self.current - 1].clone();
         let duplicate_exists: bool =
@@ -693,6 +721,9 @@ impl Compiler {
         }
         let locals = &mut self.compiling_funcs.last_mut().unwrap().locals;
         locals.last_mut().unwrap().depth = self.scope_depth as i32;
+        if parameter {
+            return;
+        }
         self.consume(
             TokenType::Semicolon,
             "Expected ';' after variable declaration",
@@ -705,7 +736,7 @@ impl Compiler {
             self.global_declaration();
         } else if self.match_(TokenType::Let) || self.match_(TokenType::Const) {
             let constant = self.tokens[self.current - 1].token_type == TokenType::Const;
-            self.local_var_declaration(constant);
+            self.local_var_declaration(constant, false);
         } else if self.match_(TokenType::Fn) {
             self.function_declaration();
         } else {
