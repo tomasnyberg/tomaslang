@@ -314,111 +314,164 @@ pub fn scan(input: &str) -> Vec<Token> {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
-
     use crate::scanner::{Token, TokenType};
+
+    fn verify_output(tokens: Vec<Token>, expected: Vec<TokenType>) {
+        assert_eq!(tokens.len(), expected.len());
+        for (i, token) in tokens.iter().enumerate() {
+            assert_eq!(token.token_type, expected[i]);
+        }
+    }
 
     #[test]
     fn empty_str_should_give_eof() {
         let input = "";
         let tokens = super::scan(input);
-        assert_eq!(tokens.len(), 1);
-        assert_eq!(tokens[0].token_type, super::TokenType::Eof);
+        let expected = vec![TokenType::Eof];
+        verify_output(tokens, expected);
     }
 
     #[test]
     fn skips_whitespace() {
         let input = "     \t          \n            \r\n\n";
         let tokens = super::scan(input);
-        assert_eq!(tokens.len(), 1);
-        assert_eq!(tokens[0].token_type, super::TokenType::Eof);
+        let expected = vec![TokenType::Eof];
+        verify_output(tokens, expected);
     }
 
     #[test]
     fn skips_comments() {
         let input = "// this is a comment\n";
         let tokens = super::scan(input);
-        assert_eq!(tokens.len(), 1);
-        assert_eq!(tokens[0].token_type, super::TokenType::Eof);
+        let expected = vec![TokenType::Eof];
+        verify_output(tokens, expected);
     }
 
     #[test]
     fn skips_multiline_comments() {
         let input = "/* this is a comment\nand this is another comment */";
         let tokens = super::scan(input);
-        assert_eq!(tokens.len(), 1);
-        assert_eq!(tokens[0].token_type, super::TokenType::Eof);
+        let expected = vec![TokenType::Eof];
+        verify_output(tokens, expected);
     }
 
     #[test]
     fn parses_numbers() {
         let input = "12345";
         let tokens = super::scan(input);
-        assert_eq!(tokens.len(), 2);
-        assert_eq!(tokens[0].token_type, super::TokenType::Number);
+        let expected = vec![TokenType::Number, TokenType::Eof];
+        verify_output(tokens, expected);
     }
 
     #[test]
     fn parses_decimal_numbers() {
         let input = "123.45";
         let tokens = super::scan(input);
-        assert_eq!(tokens.len(), 2);
-        assert_eq!(tokens[0].token_type, super::TokenType::Number);
+        let expected = vec![TokenType::Number, TokenType::Eof];
+        verify_output(tokens, expected);
     }
 
     #[test]
     fn parses_keywords() {
-        let input = "and class else false for fn if null or print return super this true var while";
-        let tokens: Vec<Token> = super::scan(input);
-        let seen_types: HashSet<TokenType> = tokens.iter().map(|t| t.token_type).collect();
-        assert_eq!(seen_types.len(), tokens.len());
+        let input = "and class else false for fn if null or print return super this true let while";
+        let tokens = super::scan(input);
+
+        let expected = vec![
+            TokenType::And,
+            TokenType::Class,
+            TokenType::Else,
+            TokenType::False,
+            TokenType::For,
+            TokenType::Fn,
+            TokenType::If,
+            TokenType::Null,
+            TokenType::Or,
+            TokenType::Print,
+            TokenType::Return,
+            TokenType::Super,
+            TokenType::This,
+            TokenType::True,
+            TokenType::Let,
+            TokenType::While,
+            TokenType::Eof,
+        ];
+        verify_output(tokens, expected);
     }
 
     #[test]
     fn parses_one_char_tokens() {
         let input = "(){}[],.-+;*/=!<>";
-        let tokens: Vec<Token> = super::scan(input);
-        let seen_types: HashSet<TokenType> = tokens.iter().map(|t| t.token_type).collect();
-        assert_eq!(seen_types.len(), tokens.len());
+        let tokens = super::scan(input);
+        let expected = vec![
+            TokenType::LeftParen,
+            TokenType::RightParen,
+            TokenType::LeftBrace,
+            TokenType::RightBrace,
+            TokenType::LeftBracket,
+            TokenType::RightBracket,
+            TokenType::Comma,
+            TokenType::Dot,
+            TokenType::Minus,
+            TokenType::Plus,
+            TokenType::Semicolon,
+            TokenType::Star,
+            TokenType::Slash,
+            TokenType::Equal,
+            TokenType::Bang,
+            TokenType::Less,
+            TokenType::Greater,
+            TokenType::Eof,
+        ];
+        verify_output(tokens, expected);
     }
 
     #[test]
     fn parses_two_char_tokens() {
         let input = "!= == <= >=";
-        let tokens: Vec<Token> = super::scan(input);
-        let seen_types: HashSet<TokenType> = tokens.iter().map(|t| t.token_type).collect();
-        assert_eq!(tokens.len(), 5);
-        assert_eq!(seen_types.len(), tokens.len());
+        let tokens = super::scan(input);
+        let expected = vec![
+            TokenType::BangEqual,
+            TokenType::EqualEqual,
+            TokenType::LessEqual,
+            TokenType::GreaterEqual,
+            TokenType::Eof,
+        ];
+        verify_output(tokens, expected);
     }
 
     #[test]
     fn parses_strings() {
         let input = "\"hello world\"";
-        let tokens: Vec<Token> = super::scan(input);
-        assert_eq!(tokens.len(), 2);
-        assert_eq!(tokens[0].token_type, super::TokenType::String);
+        let tokens = super::scan(input);
+        let expected = vec![TokenType::String, TokenType::Eof];
+        verify_output(tokens, expected);
     }
 
     #[test]
     fn parses_global_decls() {
         let input = "global x = 5;";
-        let tokens: Vec<Token> = super::scan(input);
-        assert_eq!(tokens.len(), 6);
-        assert_eq!(tokens[0].token_type, super::TokenType::Global);
-        assert_eq!(tokens[1].token_type, super::TokenType::Identifier);
-        assert_eq!(tokens[2].token_type, super::TokenType::Equal);
+        let tokens = super::scan(input);
+        let expected = vec![
+            TokenType::Global,
+            TokenType::Identifier,
+            TokenType::Equal,
+            TokenType::Number,
+            TokenType::Semicolon,
+            TokenType::Eof,
+        ];
+        verify_output(tokens, expected);
     }
 
     #[test]
     fn parses_else_ifs() {
         let input = "else if";
-        let tokens: Vec<Token> = super::scan(input);
-        println!("{:?}", tokens);
-        assert_eq!(tokens.len(), 2);
-        assert_eq!(tokens[0].token_type, super::TokenType::Elseif);
+        let tokens = super::scan(input);
+        let expected = vec![TokenType::Elseif, TokenType::Eof];
+        verify_output(tokens, expected);
+
         let input = "if true {} else if false {} else {}";
-        let tokens: Vec<Token> = super::scan(input);
-        let expected = [
+        let tokens = super::scan(input);
+        let expected = vec![
             TokenType::If,
             TokenType::True,
             TokenType::LeftBrace,
@@ -432,17 +485,14 @@ mod tests {
             TokenType::RightBrace,
             TokenType::Eof,
         ];
-        assert_eq!(tokens.len(), expected.len());
-        for (i, token) in tokens.iter().enumerate() {
-            assert_eq!(token.token_type, expected[i]);
-        }
+        verify_output(tokens, expected);
     }
 
     #[test]
     fn parses_comparison_ops() {
         let input = "<= >= == != < >";
-        let tokens: Vec<Token> = super::scan(input);
-        let expected = [
+        let tokens = super::scan(input);
+        let expected = vec![
             TokenType::LessEqual,
             TokenType::GreaterEqual,
             TokenType::EqualEqual,
@@ -451,9 +501,6 @@ mod tests {
             TokenType::Greater,
             TokenType::Eof,
         ];
-        assert_eq!(tokens.len(), expected.len());
-        for (i, token) in tokens.iter().enumerate() {
-            assert_eq!(token.token_type, expected[i]);
-        }
+        verify_output(tokens, expected);
     }
 }
