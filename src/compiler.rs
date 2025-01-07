@@ -32,7 +32,7 @@ pub struct Function {
     pub name: Token,
     pub chunk: Chunk,
     locals: Vec<Local>,
-    arity: u8,
+    pub arity: u8,
     const_idx: usize,
 }
 
@@ -1162,5 +1162,12 @@ mod tests {
         ];
         chunk.disassemble("test");
         match_bytecode(&chunk, &expected);
+    }
+
+    #[test]
+    fn compiles_functions() {
+        compile_to_chunk("fn a() { print 1; }");
+        compile_to_chunk("fn f(a, b, c) { return a + b + c; }");
+        compile_to_chunk("fn f(a, b, c) { fn g() { return 1; } }");
     }
 }

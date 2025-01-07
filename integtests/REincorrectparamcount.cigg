@@ -1,0 +1,6 @@
+// EXPECT ERR Expected 3 arguments but got 4 at [line 6] in script\nRuntime error
+fn f(a,b,c) {
+  print "hej hopp";
+}
+
+f(1,2,3,4);

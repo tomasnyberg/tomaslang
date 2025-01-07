@@ -336,6 +336,13 @@ impl VM {
                             return VmResult::RuntimeError;
                         }
                     };
+                    if called_fn.arity != arg_c as u8 {
+                        self.runtime_error(&format!(
+                            "Expected {} arguments but got {}",
+                            called_fn.arity, arg_c
+                        ));
+                        return VmResult::RuntimeError;
+                    }
                     let return_address = Value::ReturnAddress(self.ip);
                     self.ip = called_fn.start;
                     // TODO PERF: don't really like the idea of inserting with an offset
@@ -462,6 +469,18 @@ mod tests {
         let result = vm.run();
         assert_eq!(result, VmResult::RuntimeError);
         let program = "\"hej\" >= 5;";
+        let mut vm = get_vm(program);
+        let result = vm.run();
+        assert_eq!(result, VmResult::RuntimeError);
+    }
+
+    #[test]
+    fn function_calls() {
+        let program = "fn f(a) { print a; } f(5);";
+        let mut vm = get_vm(program);
+        let result = vm.run();
+        assert_eq!(result, VmResult::OK);
+        let program = "fn f(a) { print a; } f(5,10);";
         let mut vm = get_vm(program);
         let result = vm.run();
         assert_eq!(result, VmResult::RuntimeError);
