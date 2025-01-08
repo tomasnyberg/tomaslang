@@ -1,0 +1,7 @@
+// EXPECT 10000
+let low = 0;
+let high = 100;
+for i in low..high {
+  low = low + high;
+}
+print low;

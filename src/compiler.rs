@@ -98,6 +98,7 @@ pub enum OpCode {
     SetLocal,
     JumpIfFalse,
     JumpIfTrue,
+    JumpIfNull,
     Jump,
     Loop,
     Call,
@@ -181,20 +182,21 @@ impl OpCode {
             13 => OpCode::SetLocal,
             14 => OpCode::JumpIfFalse,
             15 => OpCode::JumpIfTrue,
-            16 => OpCode::Jump,
-            17 => OpCode::Loop,
-            18 => OpCode::Call,
-            19 => OpCode::Negate,
-            20 => OpCode::Not,
-            21 => OpCode::Next,
-            22 => OpCode::Pop,
-            23 => OpCode::Print,
-            24 => OpCode::Range,
-            25 => OpCode::Null,
-            26 => OpCode::True,
-            27 => OpCode::False,
-            28 => OpCode::Return,
-            29 => OpCode::Eof,
+            16 => OpCode::JumpIfNull,
+            17 => OpCode::Jump,
+            18 => OpCode::Loop,
+            19 => OpCode::Call,
+            20 => OpCode::Negate,
+            21 => OpCode::Not,
+            22 => OpCode::Next,
+            23 => OpCode::Pop,
+            24 => OpCode::Print,
+            25 => OpCode::Range,
+            26 => OpCode::Null,
+            27 => OpCode::True,
+            28 => OpCode::False,
+            29 => OpCode::Return,
+            30 => OpCode::Eof,
             _ => panic!("unexpected opcode (did you update this match after adding an op?)"),
         }
     }
@@ -397,7 +399,13 @@ impl Compiler {
     }
 
     fn emit_jump(&mut self, jump_type: OpCode) -> usize {
-        assert!([OpCode::Jump, OpCode::JumpIfFalse, OpCode::JumpIfTrue].contains(&jump_type));
+        assert!([
+            OpCode::Jump,
+            OpCode::JumpIfFalse,
+            OpCode::JumpIfTrue,
+            OpCode::JumpIfNull
+        ]
+        .contains(&jump_type));
         self.emit_byte(jump_type as u8, true);
         self.emit_byte(0xff, false);
         self.emit_byte(0xff, false);
@@ -605,7 +613,7 @@ impl Compiler {
         let loop_start = active_chunk!(self).code.len();
         self.emit_byte(OpCode::Next as u8, true);
         self.emit_bytes(OpCode::SetLocal as u8, loop_var_idx);
-        let exit_jump = self.emit_jump(OpCode::JumpIfFalse);
+        let exit_jump = self.emit_jump(OpCode::JumpIfNull);
         self.emit_byte(OpCode::Pop as u8, true);
         self.statement();
         self.emit_loop(loop_start);

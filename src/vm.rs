@@ -339,6 +339,12 @@ impl VM {
                         self.ip += offset;
                     }
                 }
+                OpCode::JumpIfNull => {
+                    let offset = self.read_short() as usize;
+                    if let Value::Null = self.peek(0) {
+                        self.ip += offset;
+                    }
+                }
                 OpCode::Jump => {
                     let offset = self.read_short() as usize;
                     self.ip += offset;

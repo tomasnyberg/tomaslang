@@ -74,6 +74,7 @@ impl Chunk {
             OpCode::SetLocal => self.byte_instruction("SET_LOCAL_OP", offset),
             OpCode::JumpIfFalse => self.jump_instruction("JUMP_IF_FALSE_OP", 1, offset),
             OpCode::JumpIfTrue => self.jump_instruction("JUMP_IF_TRUE_OP", 1, offset),
+            OpCode::JumpIfNull => self.jump_instruction("JUMP_IF_NULL_OP", 1, offset),
             OpCode::Jump => self.jump_instruction("JUMP_OP", 1, offset),
             OpCode::Loop => self.jump_instruction("LOOP_OP", -1, offset),
             OpCode::Call => self.simple_instruction("CALL_OP", offset),
