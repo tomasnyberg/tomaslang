@@ -37,7 +37,7 @@ impl Value {
             Value::Null => "null".to_string(),
             Value::String(s) => s.to_string(),
             Value::Function(f) => format!("<fn {} (starts at {})>", f.name.lexeme, f.start),
-            Value::Range(r) => format!("R {}..{}", r.start, r.end),
+            Value::Range(r) => r.as_debug_string(),
             Value::ReturnAddress(x) => format!("RA {x}"),
         }
     }
@@ -271,6 +271,24 @@ impl VM {
                     let value = self.pop();
                     let result = Value::Bool(!self.is_truthy(&value));
                     self.push(result);
+                }
+                OpCode::Next => {
+                    let range = self.pop();
+                    // TODO PERF: validating this every iteration might be slow
+                    let mut range = match range {
+                        Value::Range(r) => r,
+                        _ => {
+                            self.runtime_error("Expected range");
+                            return VmResult::RuntimeError;
+                        }
+                    };
+                    let next = range.next();
+                    if let Some(next) = next {
+                        self.push(Value::Range(range));
+                        self.push(Value::Number(next as f64));
+                    } else {
+                        self.push(Value::Null);
+                    }
                 }
                 OpCode::Pop => {
                     self.pop();

@@ -53,6 +53,29 @@ impl Range {
             step: if start < end { 1 } else { -1 },
         }
     }
+
+    pub fn next(&mut self) -> Option<i32> {
+        if self.current == self.end {
+            return None;
+        }
+        let current = self.current;
+        self.current += self.step;
+        Some(current)
+    }
+
+    pub fn as_debug_string(&self) -> String {
+        let lower = if self.current > self.start {
+            self.current
+        } else {
+            self.start
+        };
+        let upper = if self.current < self.end {
+            self.end
+        } else {
+            self.current
+        };
+        format!("R {}..{}", lower, upper)
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -80,6 +103,7 @@ pub enum OpCode {
     Call,
     Negate,
     Not,
+    Next,
     Pop,
     Print,
     Range,
@@ -162,14 +186,15 @@ impl OpCode {
             18 => OpCode::Call,
             19 => OpCode::Negate,
             20 => OpCode::Not,
-            21 => OpCode::Pop,
-            22 => OpCode::Print,
-            23 => OpCode::Range,
-            24 => OpCode::Null,
-            25 => OpCode::True,
-            26 => OpCode::False,
-            27 => OpCode::Return,
-            28 => OpCode::Eof,
+            21 => OpCode::Next,
+            22 => OpCode::Pop,
+            23 => OpCode::Print,
+            24 => OpCode::Range,
+            25 => OpCode::Null,
+            26 => OpCode::True,
+            27 => OpCode::False,
+            28 => OpCode::Return,
+            29 => OpCode::Eof,
             _ => panic!("unexpected opcode (did you update this match after adding an op?)"),
         }
     }
@@ -509,10 +534,6 @@ impl Compiler {
         self.emit_byte(OpCode::Print as u8, true);
     }
 
-    fn for_statement(&mut self) {
-        panic!("For statement not implemented");
-    }
-
     fn if_statement(&mut self) {
         self.consume(TokenType::If, "Expected 'if' to start if statement");
         self.expression();
@@ -561,6 +582,35 @@ impl Compiler {
         self.expression();
         self.consume(TokenType::Semicolon, "Expected ';' after return value");
         self.emit_byte(OpCode::Return as u8, true);
+    }
+
+    fn for_statement(&mut self) {
+        self.consume(TokenType::For, "Expected 'for' to start for loop");
+        self.begin_scope();
+        self.local_var_declaration(false, true); // Loop variable
+        let loop_var_name = self.tokens[self.current - 1].clone();
+        let loop_var_idx = self.resolve_local(&loop_var_name).unwrap();
+        self.consume(TokenType::In, "Expected 'in' after for loop variable");
+        // Hopefully this is something iterable
+        self.expression();
+
+        // The range is considered a local variable since it occupies a slot on the stack.
+        // Otherwise the offsets for other locals may be incorrect
+        self.compiling_funcs.last_mut().unwrap().locals.push(Local {
+            name: Token::new(TokenType::Identifier, "range local".to_string(), 0),
+            depth: self.scope_depth as i32,
+            constant: false,
+        });
+
+        let loop_start = active_chunk!(self).code.len();
+        self.emit_byte(OpCode::Next as u8, true);
+        self.emit_bytes(OpCode::SetLocal as u8, loop_var_idx);
+        let exit_jump = self.emit_jump(OpCode::JumpIfFalse);
+        self.emit_byte(OpCode::Pop as u8, true);
+        self.statement();
+        self.emit_loop(loop_start);
+        self.patch_jump(exit_jump);
+        self.end_scope(false);
     }
 
     fn while_statement(&mut self) {
@@ -710,7 +760,7 @@ impl Compiler {
             .push(self.compiling_funcs.pop().unwrap());
     }
 
-    fn local_var_declaration(&mut self, constant: bool, parameter: bool) {
+    fn local_var_declaration(&mut self, constant: bool, no_semicolon: bool) {
         self.consume(TokenType::Identifier, "Expected variable name");
         let name = self.tokens[self.current - 1].clone();
         let duplicate_exists: bool =
@@ -749,7 +799,7 @@ impl Compiler {
         }
         let locals = &mut self.compiling_funcs.last_mut().unwrap().locals;
         locals.last_mut().unwrap().depth = self.scope_depth as i32;
-        if parameter {
+        if no_semicolon {
             return;
         }
         self.consume(

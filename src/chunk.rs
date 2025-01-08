@@ -79,6 +79,7 @@ impl Chunk {
             OpCode::Call => self.simple_instruction("CALL_OP", offset),
             OpCode::Negate => self.simple_instruction("NEGATE_OP", offset),
             OpCode::Not => self.simple_instruction("NOT_OP", offset),
+            OpCode::Next => self.simple_instruction("NEXT_OP", offset),
             OpCode::Pop => self.simple_instruction("POP_OP", offset),
             OpCode::Print => self.simple_instruction("PRINT_OP", offset),
             OpCode::Range => self.simple_instruction("RANGE_OP", offset),
