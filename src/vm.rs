@@ -176,12 +176,17 @@ impl VM {
                 }
                 self.push(Value::Number(a.as_number() * b.as_number()));
             }
-            OpCode::Div => {
+            OpCode::Div | OpCode::DivInt => {
                 if a.is_string() || b.is_string() {
                     self.runtime_error("Cannot divide strings");
                     return;
                 }
-                self.push(Value::Number(a.as_number() / b.as_number()));
+                let result = a.as_number() / b.as_number();
+                if op == OpCode::DivInt {
+                    self.push(Value::Number(result.floor()));
+                    return;
+                }
+                self.push(Value::Number(result));
             }
             OpCode::Equal => self.push(Value::Bool(a == b)),
             OpCode::NotEqual => self.push(Value::Bool(a != b)),
@@ -252,6 +257,7 @@ impl VM {
                 | OpCode::Sub
                 | OpCode::Mul
                 | OpCode::Div
+                | OpCode::DivInt
                 | OpCode::Equal
                 | OpCode::NotEqual
                 | OpCode::Greater

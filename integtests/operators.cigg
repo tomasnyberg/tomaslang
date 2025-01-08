@@ -1,4 +1,4 @@
-// EXPECT true\ntrue\ntrue\ntrue\ntrue\ntrue\nfalse\ntrue\nfalse\ntrue
+// EXPECT true\ntrue\ntrue\ntrue\ntrue\ntrue\nfalse\ntrue\nfalse\ntrue\n2
 
 print 5 <= 10;
 print 5 <= 5;
@@ -13,3 +13,4 @@ print a == b;
 print a != b;
 a = 15;
 print a != b;
+print 5 /_ 2;

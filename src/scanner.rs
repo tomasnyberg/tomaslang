@@ -27,6 +27,7 @@ pub enum TokenType {
     GreaterEqual,
     Less,
     LessEqual,
+    SlashDown,
 
     Identifier,
     String,
@@ -253,7 +254,14 @@ impl Scanner {
             '+' => Token::new(TokenType::Plus, String::from("+"), self.line),
             ';' => Token::new(TokenType::Semicolon, String::from(";"), self.line),
             '*' => Token::new(TokenType::Star, String::from("*"), self.line),
-            '/' => Token::new(TokenType::Slash, String::from("/"), self.line),
+            '/' => {
+                if self.peek() == '_' {
+                    self.advance();
+                    Token::new(TokenType::SlashDown, String::from("/_"), self.line)
+                } else {
+                    Token::new(TokenType::Slash, String::from("/"), self.line)
+                }
+            }
             '.' => {
                 if self.peek() == '.' {
                     self.advance();
@@ -540,6 +548,19 @@ mod tests {
             TokenType::Number,
             TokenType::DotDot,
             TokenType::Number,
+            TokenType::Eof,
+        ];
+        verify_output(tokens, expected);
+    }
+
+    #[test]
+    fn parses_slashdown() {
+        let input = "/_ / a";
+        let tokens = super::scan(input);
+        let expected = vec![
+            TokenType::SlashDown,
+            TokenType::Slash,
+            TokenType::Identifier,
             TokenType::Eof,
         ];
         verify_output(tokens, expected);
