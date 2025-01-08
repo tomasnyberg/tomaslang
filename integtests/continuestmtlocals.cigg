@@ -1,0 +1,25 @@
+// EXPECT 100\n2360\n3\n4
+for i in 1..5 {
+  let y = 100;
+  y = y*i; 
+  if y == 100 {
+    print y;
+    continue;
+  }
+  fn localfn() {
+    let tot = 0;
+    for i in 1..50 {
+      if i < 10 {
+        continue;
+      }
+      tot = tot + i;
+    }
+    return tot;
+  }
+  let z = localfn();
+  if z * i < 2400 {
+    print z*i;
+    continue;
+  }
+  print i;
+}

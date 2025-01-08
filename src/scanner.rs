@@ -34,6 +34,7 @@ pub enum TokenType {
     Number,
     And,
     Class,
+    Continue,
     Else,
     Elseif,
     False,
@@ -205,6 +206,7 @@ impl Scanner {
             "true" => Token::new(TokenType::True, lexeme, self.line),
             "let" => Token::new(TokenType::Let, lexeme, self.line),
             "const" => Token::new(TokenType::Const, lexeme, self.line),
+            "continue" => Token::new(TokenType::Continue, lexeme, self.line),
             "while" => Token::new(TokenType::While, lexeme, self.line),
             _ => Token::new(TokenType::Identifier, lexeme, self.line),
         }
@@ -563,6 +565,14 @@ mod tests {
             TokenType::Identifier,
             TokenType::Eof,
         ];
+        verify_output(tokens, expected);
+    }
+
+    #[test]
+    fn parses_continue() {
+        let input = "continue;";
+        let tokens = super::scan(input);
+        let expected = vec![TokenType::Continue, TokenType::Semicolon, TokenType::Eof];
         verify_output(tokens, expected);
     }
 }

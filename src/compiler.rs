@@ -17,6 +17,8 @@ struct Compiler {
     compiled_funcs: Vec<Function>,
     rules: HashMap<TokenType, ParseRule>,
     scope_depth: usize,
+    // For continue; keep track of (loop_start, scope_depth)
+    loop_tracker: Vec<(usize, usize)>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -286,6 +288,7 @@ impl Compiler {
             compiled_funcs: Vec::new(),
             rules: Self::create_rules(),
             scope_depth: 0,
+            loop_tracker: Vec::new(),
         }
     }
 
@@ -615,6 +618,7 @@ impl Compiler {
         });
 
         let loop_start = active_chunk!(self).code.len();
+        self.loop_tracker.push((loop_start, self.scope_depth));
 
         // Update the loop variable
         self.emit_byte(OpCode::Next as u8, true);
@@ -629,6 +633,30 @@ impl Compiler {
         // Loop end
         self.patch_jump(exit_jump);
         self.end_scope(false);
+        self.loop_tracker.pop();
+    }
+
+    fn continue_statement(&mut self) {
+        self.consume(
+            TokenType::Continue,
+            "Expected 'continue' to start continue statement",
+        );
+        self.consume(TokenType::Semicolon, "Expected ';' after 'continue'");
+        if self.loop_tracker.is_empty() {
+            self.error_at_current("Cannot use 'continue' outside of a loop");
+            return;
+        }
+        let (loop_start, scope_depth) = *self.loop_tracker.last().unwrap();
+        let locals = &self.compiling_funcs.last_mut().unwrap().locals;
+        let to_pop = locals
+            .iter()
+            .rev()
+            .take_while(|local| local.depth > scope_depth as i32)
+            .count();
+        for _ in 0..to_pop {
+            self.emit_byte(OpCode::Pop as u8, true);
+        }
+        self.emit_loop(loop_start);
     }
 
     fn while_statement(&mut self) {
@@ -869,6 +897,7 @@ impl Compiler {
             TokenType::If => self.if_statement(),
             TokenType::Return => self.return_statement(),
             TokenType::While => self.while_statement(),
+            TokenType::Continue => self.continue_statement(),
             TokenType::LeftBrace => {
                 self.begin_scope();
                 self.consume(TokenType::LeftBrace, "Expected '{' to start block");

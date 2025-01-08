@@ -1,0 +1,15 @@
+// EXPECT 1\n2\n4\n0
+for i in 1..5 {
+  if i == 3 {
+    continue;
+  }
+  print i;
+}
+
+
+let tot = 0;
+for i in 1..10000 {
+  continue;
+  tot = tot + i;
+}
+print tot;
