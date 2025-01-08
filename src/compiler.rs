@@ -615,12 +615,18 @@ impl Compiler {
         });
 
         let loop_start = active_chunk!(self).code.len();
+
+        // Update the loop variable
         self.emit_byte(OpCode::Next as u8, true);
         self.emit_bytes(OpCode::SetLocal as u8, loop_var_idx);
         let exit_jump = self.emit_jump(OpCode::JumpIfNull);
         self.emit_byte(OpCode::Pop as u8, true);
+
+        // Loop body
         self.statement();
         self.emit_loop(loop_start);
+
+        // Loop end
         self.patch_jump(exit_jump);
         self.end_scope(false);
     }
