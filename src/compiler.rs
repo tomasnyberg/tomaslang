@@ -593,7 +593,10 @@ impl Compiler {
     }
 
     fn print_statement(&mut self) {
-        self.advance(); // Move over the print token
+        self.consume(
+            TokenType::Print,
+            "Expected 'print' to start print statement",
+        );
         self.expression();
         self.consume(TokenType::Semicolon, "Expected ';' after value");
         self.emit_byte(OpCode::Print as u8, true);
