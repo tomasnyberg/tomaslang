@@ -93,6 +93,8 @@ pub enum OpCode {
     Mul,
     Div,
     DivInt,
+    Extend,
+    ExtendInPlace,
     Equal,
     Mod,
     NotEqual,
@@ -180,33 +182,35 @@ impl OpCode {
             4 => OpCode::Mul,
             5 => OpCode::Div,
             6 => OpCode::DivInt,
-            7 => OpCode::Equal,
-            8 => OpCode::Mod,
-            9 => OpCode::NotEqual,
-            10 => OpCode::Greater,
-            11 => OpCode::GreaterEqual,
-            12 => OpCode::DefineGlobal,
-            13 => OpCode::GetGlobal,
-            14 => OpCode::SetGlobal,
-            15 => OpCode::GetLocal,
-            16 => OpCode::SetLocal,
-            17 => OpCode::JumpIfFalse,
-            18 => OpCode::JumpIfTrue,
-            19 => OpCode::JumpIfNull,
-            20 => OpCode::Jump,
-            21 => OpCode::Loop,
-            22 => OpCode::Call,
-            23 => OpCode::Negate,
-            24 => OpCode::Not,
-            25 => OpCode::Next,
-            26 => OpCode::Pop,
-            27 => OpCode::Print,
-            28 => OpCode::Range,
-            29 => OpCode::Null,
-            30 => OpCode::True,
-            31 => OpCode::False,
-            32 => OpCode::Return,
-            33 => OpCode::Eof,
+            7 => OpCode::Extend,
+            8 => OpCode::ExtendInPlace,
+            9 => OpCode::Equal,
+            10 => OpCode::Mod,
+            11 => OpCode::NotEqual,
+            12 => OpCode::Greater,
+            13 => OpCode::GreaterEqual,
+            14 => OpCode::DefineGlobal,
+            15 => OpCode::GetGlobal,
+            16 => OpCode::SetGlobal,
+            17 => OpCode::GetLocal,
+            18 => OpCode::SetLocal,
+            19 => OpCode::JumpIfFalse,
+            20 => OpCode::JumpIfTrue,
+            21 => OpCode::JumpIfNull,
+            22 => OpCode::Jump,
+            23 => OpCode::Loop,
+            24 => OpCode::Call,
+            25 => OpCode::Negate,
+            26 => OpCode::Not,
+            27 => OpCode::Next,
+            28 => OpCode::Pop,
+            29 => OpCode::Print,
+            30 => OpCode::Range,
+            31 => OpCode::Null,
+            32 => OpCode::True,
+            33 => OpCode::False,
+            34 => OpCode::Return,
+            35 => OpCode::Eof,
             _ => panic!("unexpected opcode (did you update this match after adding an op?)"),
         }
     }
@@ -415,14 +419,23 @@ impl Compiler {
             | TokenType::StarEqual
             | TokenType::SlashEqual
             | TokenType::SlashDownEqual
-            | TokenType::PercentEqual
-            | TokenType::ColonEqual => {
+            | TokenType::PercentEqual => {
                 self.advance();
                 self.ensure_not_const(resolved, arg as usize);
                 self.emit_bytes(get_op as u8, arg);
                 self.expression();
                 self.emit_compound_operator(operator);
                 self.emit_bytes(set_op as u8, arg);
+            }
+            TokenType::ColonEqual => {
+                assert!(
+                    set_op == OpCode::SetLocal,
+                    ":= not supported for globals (yet)"
+                );
+                self.advance();
+                self.ensure_not_const(resolved, arg as usize);
+                self.expression();
+                self.emit_bytes(OpCode::ExtendInPlace as u8, arg);
             }
             _ => self.emit_bytes(get_op as u8, arg),
         }

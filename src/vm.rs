@@ -347,6 +347,22 @@ impl VM {
                 OpCode::Pop => {
                     self.pop();
                 }
+                OpCode::Extend => {
+                    unimplemented!();
+                }
+                OpCode::ExtendInPlace => {
+                    let local_idx = self.local_idx_on_stack();
+                    let new_element = self.peek(0).clone();
+                    let target_value = &mut self.stack[local_idx];
+                    match target_value {
+                        Value::Array(a) => a.push(new_element),
+                        Value::String(a) => a.push_str(&new_element.as_string()),
+                        _ => {
+                            self.runtime_error("Expected array");
+                            return VmResult::RuntimeError;
+                        }
+                    }
+                }
                 OpCode::DefineGlobal => {
                     let name = self.global_identifier();
                     let value = self.pop();

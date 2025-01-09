@@ -1,0 +1,10 @@
+// EXPECT [1, 2, 3, 4, 5]
+let arr = [];
+for i in 1..6 {
+  arr := i;
+}
+print arr;
+
+for i in 1..10000 {
+  arr := i;
+}

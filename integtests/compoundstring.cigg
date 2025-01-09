@@ -1,0 +1,10 @@
+// EXPECT aaaaa
+let s = "";
+for i in 1..6 {
+  s := "a";
+}
+print s;
+
+for i in 1..10000 {
+  s := "a";
+}
