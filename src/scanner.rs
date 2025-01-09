@@ -28,6 +28,7 @@ pub enum TokenType {
     Less,
     LessEqual,
     SlashDown,
+    Percent,
 
     Identifier,
     String,
@@ -256,6 +257,7 @@ impl Scanner {
             '+' => Token::new(TokenType::Plus, String::from("+"), self.line),
             ';' => Token::new(TokenType::Semicolon, String::from(";"), self.line),
             '*' => Token::new(TokenType::Star, String::from("*"), self.line),
+            '%' => Token::new(TokenType::Percent, String::from("%"), self.line),
             '/' => {
                 if self.peek() == '_' {
                     self.advance();
@@ -420,7 +422,7 @@ mod tests {
 
     #[test]
     fn parses_one_char_tokens() {
-        let input = "(){}[],.-+;*/=!<>";
+        let input = "(){}[],.-+;*/=!<>%";
         let tokens = super::scan(input);
         let expected = vec![
             TokenType::LeftParen,
@@ -440,6 +442,7 @@ mod tests {
             TokenType::Bang,
             TokenType::Less,
             TokenType::Greater,
+            TokenType::Percent,
             TokenType::Eof,
         ];
         verify_output(tokens, expected);
@@ -573,6 +576,21 @@ mod tests {
         let input = "continue;";
         let tokens = super::scan(input);
         let expected = vec![TokenType::Continue, TokenType::Semicolon, TokenType::Eof];
+        verify_output(tokens, expected);
+    }
+
+    #[test]
+    fn parses_percent() {
+        let input = "5 % 10*2";
+        let tokens = super::scan(input);
+        let expected = vec![
+            TokenType::Number,
+            TokenType::Percent,
+            TokenType::Number,
+            TokenType::Star,
+            TokenType::Number,
+            TokenType::Eof,
+        ];
         verify_output(tokens, expected);
     }
 }

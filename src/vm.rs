@@ -189,6 +189,13 @@ impl VM {
                 self.push(Value::Number(result));
             }
             OpCode::Equal => self.push(Value::Bool(a == b)),
+            OpCode::Mod => {
+                if !a.is_number() || !b.is_number() {
+                    self.runtime_error("Expected numbers to mod operation");
+                    return;
+                }
+                self.push(Value::Number(a.as_number() % b.as_number()));
+            }
             OpCode::NotEqual => self.push(Value::Bool(a != b)),
             OpCode::Greater => {
                 if a.is_string() && b.is_string() {
@@ -259,6 +266,7 @@ impl VM {
                 | OpCode::Div
                 | OpCode::DivInt
                 | OpCode::Equal
+                | OpCode::Mod
                 | OpCode::NotEqual
                 | OpCode::Greater
                 | OpCode::GreaterEqual => {
