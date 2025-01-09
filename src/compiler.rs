@@ -380,6 +380,12 @@ impl Compiler {
         None
     }
 
+    fn ensure_not_const(&mut self, resolved: Option<u8>, arg: usize) {
+        if resolved.is_some() && self.compiling_funcs.last().unwrap().locals[arg].constant {
+            self.error_at_current("Cannot assign to constant variable");
+        }
+    }
+
     // TODO: Disallow assigning in weird ways e.g a + (b = 1)
     fn variable(&mut self) {
         let var_token = self.peek(1).clone();
@@ -396,16 +402,29 @@ impl Compiler {
             set_op = OpCode::SetGlobal;
             get_op = OpCode::GetGlobal;
         }
-        if self.match_(TokenType::Equal) {
-            if resolved.is_some()
-                && self.compiling_funcs.last().unwrap().locals[arg as usize].constant
-            {
-                self.error_at_current("Cannot assign to constant variable");
+        let operator = self.peek(0).token_type;
+        match operator {
+            TokenType::Equal => {
+                self.advance();
+                self.ensure_not_const(resolved, arg as usize);
+                self.expression();
+                self.emit_bytes(set_op as u8, arg);
             }
-            self.expression();
-            self.emit_bytes(set_op as u8, arg);
-        } else {
-            self.emit_bytes(get_op as u8, arg);
+            TokenType::PlusEqual
+            | TokenType::MinusEqual
+            | TokenType::StarEqual
+            | TokenType::SlashEqual
+            | TokenType::SlashDownEqual
+            | TokenType::PercentEqual
+            | TokenType::ColonEqual => {
+                self.advance();
+                self.ensure_not_const(resolved, arg as usize);
+                self.emit_bytes(get_op as u8, arg);
+                self.expression();
+                self.emit_compound_operator(operator);
+                self.emit_bytes(set_op as u8, arg);
+            }
+            _ => self.emit_bytes(get_op as u8, arg),
         }
     }
 
@@ -532,10 +551,19 @@ impl Compiler {
         self.emit_byte(OpCode::Range as u8, true);
     }
 
-    fn binary(&mut self) {
-        let operator = self.tokens[self.current - 1].token_type;
-        let rule: ParseRule = self.rules[&operator];
-        self.parse_precedence(rule.precedence.next());
+    fn emit_compound_operator(&mut self, operator: TokenType) {
+        match operator {
+            TokenType::PlusEqual => self.emit_byte(OpCode::Add as u8, true),
+            TokenType::MinusEqual => self.emit_byte(OpCode::Sub as u8, true),
+            TokenType::StarEqual => self.emit_byte(OpCode::Mul as u8, true),
+            TokenType::SlashEqual => self.emit_byte(OpCode::Div as u8, true),
+            TokenType::SlashDownEqual => self.emit_byte(OpCode::DivInt as u8, true),
+            TokenType::PercentEqual => self.emit_byte(OpCode::Mod as u8, true),
+            _ => self.error_at_current("Expected compound assignment operator"),
+        }
+    }
+
+    fn emit_operator(&mut self, operator: TokenType) {
         match operator {
             TokenType::Plus => self.emit_byte(OpCode::Add as u8, true),
             TokenType::Minus => self.emit_byte(OpCode::Sub as u8, true),
@@ -551,6 +579,13 @@ impl Compiler {
             TokenType::Percent => self.emit_byte(OpCode::Mod as u8, true),
             _ => self.error_at_current("Expected binary operator"),
         }
+    }
+
+    fn binary(&mut self) {
+        let operator = self.peek(1).token_type;
+        let rule: ParseRule = self.rules[&operator];
+        self.parse_precedence(rule.precedence.next());
+        self.emit_operator(operator);
     }
 
     fn expression(&mut self) {
@@ -1368,6 +1403,26 @@ mod tests {
             OpCode::Constant as u8,
             1,
             OpCode::Range as u8,
+            OpCode::Pop as u8,
+            OpCode::Eof as u8,
+        ];
+        chunk.disassemble("test");
+        match_bytecode(&chunk, &expected);
+    }
+
+    #[test]
+    fn can_compile_compound_assignment() {
+        let chunk: Chunk = compile_to_chunk("let a = 1; a += 1;");
+        let expected = [
+            OpCode::Constant as u8,
+            0,
+            OpCode::GetLocal as u8,
+            0,
+            OpCode::Constant as u8,
+            1,
+            OpCode::Add as u8,
+            OpCode::SetLocal as u8,
+            0,
             OpCode::Pop as u8,
             OpCode::Eof as u8,
         ];

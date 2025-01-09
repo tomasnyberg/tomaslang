@@ -1,0 +1,24 @@
+/*
+// EXPECT MULTI
+101
+100
+200
+100
+0
+2
+// EXPECT MULTI END
+*/
+let a = 100;
+a += 1;
+print a;
+a -= 1;
+print a;
+a *= 2;
+print a;
+a /_= 2;
+print a;
+a %= 2;
+print a;
+a += 10;
+a /= 5;
+print a;
