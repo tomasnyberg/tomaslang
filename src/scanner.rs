@@ -11,6 +11,7 @@ pub enum TokenType {
     LeftBrace,
     RightBrace,
     Comma,
+    Colon,
     Dot,
     DotDot,
     Minus,
@@ -29,6 +30,14 @@ pub enum TokenType {
     LessEqual,
     SlashDown,
     Percent,
+
+    PlusEqual,
+    MinusEqual,
+    StarEqual,
+    SlashEqual,
+    SlashDownEqual,
+    PercentEqual,
+    ColonEqual,
 
     Identifier,
     String,
@@ -233,6 +242,25 @@ impl Scanner {
         )
     }
 
+    fn special_second(
+        &mut self,
+        curr_c: char,
+        curr: TokenType,
+        special_next: char,
+        special_token: TokenType,
+    ) -> Token {
+        if self.peek() == special_next {
+            self.advance();
+            Token::new(
+                special_token,
+                format!("{}{}", curr_c, special_next),
+                self.line,
+            )
+        } else {
+            Token::new(curr, format!("{}", curr_c), self.line)
+        }
+    }
+
     pub fn scan_token(&mut self) -> Token {
         self.skip_whitespace_and_comments();
         self.start = self.current;
@@ -255,59 +283,28 @@ impl Scanner {
             '[' => Token::new(TokenType::LeftBracket, String::from("["), self.line),
             ']' => Token::new(TokenType::RightBracket, String::from("]"), self.line),
             ',' => Token::new(TokenType::Comma, String::from(","), self.line),
-            '-' => Token::new(TokenType::Minus, String::from("-"), self.line),
-            '+' => Token::new(TokenType::Plus, String::from("+"), self.line),
+            '-' => self.special_second(c, TokenType::Minus, '=', TokenType::MinusEqual),
+            '+' => self.special_second(c, TokenType::Plus, '=', TokenType::PlusEqual),
+            ':' => self.special_second(c, TokenType::Colon, '=', TokenType::ColonEqual),
             ';' => Token::new(TokenType::Semicolon, String::from(";"), self.line),
-            '*' => Token::new(TokenType::Star, String::from("*"), self.line),
-            '%' => Token::new(TokenType::Percent, String::from("%"), self.line),
+            '*' => self.special_second(c, TokenType::Star, '=', TokenType::StarEqual),
+            '%' => self.special_second(c, TokenType::Percent, '=', TokenType::PercentEqual),
             '/' => {
                 if self.peek() == '_' {
                     self.advance();
-                    Token::new(TokenType::SlashDown, String::from("/_"), self.line)
+                    self.special_second(c, TokenType::SlashDown, '=', TokenType::SlashDownEqual)
+                } else if self.peek() == '=' {
+                    self.advance();
+                    Token::new(TokenType::SlashEqual, String::from("/="), self.line)
                 } else {
                     Token::new(TokenType::Slash, String::from("/"), self.line)
                 }
             }
-            '.' => {
-                if self.peek() == '.' {
-                    self.advance();
-                    Token::new(TokenType::DotDot, String::from(".."), self.line)
-                } else {
-                    Token::new(TokenType::Dot, String::from("."), self.line)
-                }
-            }
-            '!' => {
-                if self.peek() == '=' {
-                    self.advance();
-                    Token::new(TokenType::BangEqual, String::from("!"), self.line)
-                } else {
-                    Token::new(TokenType::Bang, String::from("!"), self.line)
-                }
-            }
-            '=' => {
-                if self.peek() == '=' {
-                    self.advance();
-                    Token::new(TokenType::EqualEqual, String::from("=="), self.line)
-                } else {
-                    Token::new(TokenType::Equal, String::from("="), self.line)
-                }
-            }
-            '<' => {
-                if self.peek() == '=' {
-                    self.advance();
-                    Token::new(TokenType::LessEqual, String::from("<="), self.line)
-                } else {
-                    Token::new(TokenType::Less, String::from("<"), self.line)
-                }
-            }
-            '>' => {
-                if self.peek() == '=' {
-                    self.advance();
-                    Token::new(TokenType::GreaterEqual, String::from(">="), self.line)
-                } else {
-                    Token::new(TokenType::Greater, String::from(">"), self.line)
-                }
-            }
+            '.' => self.special_second(c, TokenType::Dot, '.', TokenType::DotDot),
+            '!' => self.special_second(c, TokenType::Bang, '=', TokenType::BangEqual),
+            '=' => self.special_second(c, TokenType::Equal, '=', TokenType::EqualEqual),
+            '<' => self.special_second(c, TokenType::Less, '=', TokenType::LessEqual),
+            '>' => self.special_second(c, TokenType::Greater, '=', TokenType::GreaterEqual),
             '\'' | '"' => self.string(c),
             _ => Token::new(TokenType::Error, String::from(""), self.line),
         }
@@ -424,7 +421,7 @@ mod tests {
 
     #[test]
     fn parses_one_char_tokens() {
-        let input = "(){}[],.-+;*/=!<>%";
+        let input = "(){}[],.-+;=*/!<>%:";
         let tokens = super::scan(input);
         let expected = vec![
             TokenType::LeftParen,
@@ -438,13 +435,14 @@ mod tests {
             TokenType::Minus,
             TokenType::Plus,
             TokenType::Semicolon,
+            TokenType::Equal,
             TokenType::Star,
             TokenType::Slash,
-            TokenType::Equal,
             TokenType::Bang,
             TokenType::Less,
             TokenType::Greater,
             TokenType::Percent,
+            TokenType::Colon,
             TokenType::Eof,
         ];
         verify_output(tokens, expected);
@@ -611,6 +609,23 @@ mod tests {
             TokenType::Break,
             TokenType::Semicolon,
             TokenType::RightBrace,
+            TokenType::Eof,
+        ];
+        verify_output(tokens, expected);
+    }
+
+    #[test]
+    fn parses_binary_assigners() {
+        let input = "+= -= *= /= /_= %= :=";
+        let tokens = super::scan(input);
+        let expected = vec![
+            TokenType::PlusEqual,
+            TokenType::MinusEqual,
+            TokenType::StarEqual,
+            TokenType::SlashEqual,
+            TokenType::SlashDownEqual,
+            TokenType::PercentEqual,
+            TokenType::ColonEqual,
             TokenType::Eof,
         ];
         verify_output(tokens, expected);
