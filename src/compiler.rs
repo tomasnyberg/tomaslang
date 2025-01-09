@@ -303,15 +303,20 @@ impl Compiler {
     }
 
     fn consume(&mut self, token_type: TokenType, message: &str) {
-        if self.tokens[self.current].token_type == token_type {
+        if self.peek(0).token_type == token_type {
             self.advance();
             return;
         }
         self.error_at_current(message);
     }
 
+    fn peek(&self, offset: i32) -> &Token {
+        assert!((self.current as i32 - offset) >= 0);
+        &self.tokens[(self.current as i32 - offset) as usize]
+    }
+
     fn check(&mut self, token_type: TokenType) -> bool {
-        self.tokens[self.current].token_type == token_type
+        self.peek(0).token_type == token_type
     }
 
     fn error_at_current(&mut self, message: &str) {
@@ -319,7 +324,7 @@ impl Compiler {
             return;
         }
         self.error = true;
-        let token = &self.tokens[self.current];
+        let token = &self.peek(0);
         eprintln!(
             "[line {}] Error at '{}': {}",
             token.line, token.lexeme, message
@@ -327,7 +332,7 @@ impl Compiler {
     }
 
     fn match_(&mut self, token_type: TokenType) -> bool {
-        if self.tokens[self.current].token_type == token_type {
+        if self.peek(0).token_type == token_type {
             self.advance();
             return true;
         }
@@ -354,7 +359,7 @@ impl Compiler {
     }
 
     fn literal(&mut self) {
-        match self.tokens[self.current - 1].token_type {
+        match self.peek(1).token_type {
             TokenType::Null => self.emit_byte(OpCode::Null as u8, true),
             TokenType::True => self.emit_byte(OpCode::True as u8, true),
             TokenType::False => self.emit_byte(OpCode::False as u8, true),
@@ -377,7 +382,7 @@ impl Compiler {
 
     // TODO: Disallow assigning in weird ways e.g a + (b = 1)
     fn variable(&mut self) {
-        let var_token = self.tokens[self.current - 1].clone();
+        let var_token = self.peek(1).clone();
         let set_op: OpCode;
         let get_op: OpCode;
         let arg: u8;
@@ -405,7 +410,7 @@ impl Compiler {
     }
 
     fn unary(&mut self) {
-        let operator = self.tokens[self.current - 1].token_type;
+        let operator = self.peek(1).token_type;
         self.parse_precedence(Precedence::Unary);
         match operator {
             TokenType::Minus => self.emit_byte(OpCode::Negate as u8, true),
@@ -468,8 +473,8 @@ impl Compiler {
     }
 
     fn string(&mut self) {
-        if self.tokens[self.current - 1].token_type == TokenType::String {
-            let string = self.tokens[self.current - 1].lexeme.clone();
+        if self.peek(1).token_type == TokenType::String {
+            let string = self.peek(1).lexeme.clone();
             self.emit_constant(Value::String(string));
             return;
         }
@@ -477,8 +482,8 @@ impl Compiler {
     }
 
     fn number(&mut self) {
-        if self.tokens[self.current - 1].token_type == TokenType::Number {
-            let number = self.tokens[self.current - 1].lexeme.parse::<f64>().unwrap();
+        if self.peek(1).token_type == TokenType::Number {
+            let number = self.peek(1).lexeme.parse::<f64>().unwrap();
             self.emit_constant(Value::Number(number));
             return;
         }
@@ -491,11 +496,10 @@ impl Compiler {
 
     fn emit_byte(&mut self, byte: u8, is_op: bool) {
         // Push code to the functions chunk rather than the script
+        let line = self.peek(1).line as usize;
         let chunk = active_chunk!(self);
         chunk.code.push(byte);
-        chunk
-            .lines
-            .push(self.tokens[self.current - 1].line as usize);
+        chunk.lines.push(line);
         let to_push = if is_op {
             format!("{:3} {:?}", byte, OpCode::from_u8(byte))
         } else {
@@ -621,7 +625,7 @@ impl Compiler {
         self.consume(TokenType::For, "Expected 'for' to start for loop");
         self.begin_scope();
         self.local_var_declaration(false, true); // Loop variable
-        let loop_var_name = self.tokens[self.current - 1].clone();
+        let loop_var_name = self.peek(1).clone();
         let loop_var_idx = self.resolve_local(&loop_var_name).unwrap();
         self.consume(TokenType::In, "Expected 'in' after for loop variable");
         // Hopefully this is something iterable
@@ -762,22 +766,22 @@ impl Compiler {
 
     fn parse_precedence(&mut self, precedence: Precedence) {
         self.advance();
-        let prefix_rule = self.rules[&self.tokens[self.current - 1].token_type].prefix;
+        let prefix_rule = self.rules[&self.peek(1).token_type].prefix;
         if prefix_rule.is_none() {
             self.error_at_current("Expected expression");
             return;
         }
         prefix_rule.unwrap()(self);
 
-        while precedence <= self.rules[&self.tokens[self.current].token_type].precedence {
+        while precedence <= self.rules[&self.peek(0).token_type].precedence {
             self.advance();
-            let infix_rule = self.rules[&self.tokens[self.current - 1].token_type].infix;
+            let infix_rule = self.rules[&self.peek(1).token_type].infix;
             infix_rule.unwrap()(self);
         }
     }
 
     fn identifier_constant(&mut self) -> u8 {
-        let identifier = self.tokens[self.current - 1].lexeme.clone();
+        let identifier = self.peek(1).lexeme.clone();
         let value = Value::String(identifier);
         self.make_constant(value)
     }
@@ -800,7 +804,7 @@ impl Compiler {
 
     fn function_declaration(&mut self) {
         self.consume(TokenType::Identifier, "Expected function name");
-        let name = self.tokens[self.current - 1].clone();
+        let name = self.peek(1).clone();
         let start = active_chunk!(self).code.len();
         let mut new_func = Function {
             start,
@@ -866,7 +870,7 @@ impl Compiler {
 
     fn local_var_declaration(&mut self, constant: bool, no_semicolon: bool) {
         self.consume(TokenType::Identifier, "Expected variable name");
-        let name = self.tokens[self.current - 1].clone();
+        let name = self.peek(1).clone();
         let duplicate_exists: bool =
             self.compiling_funcs
                 .last()
@@ -917,7 +921,7 @@ impl Compiler {
             // TODO: disallow this when not at global scope
             self.global_declaration();
         } else if self.match_(TokenType::Let) || self.match_(TokenType::Const) {
-            let constant = self.tokens[self.current - 1].token_type == TokenType::Const;
+            let constant = self.peek(1).token_type == TokenType::Const;
             self.local_var_declaration(constant, false);
         } else if self.match_(TokenType::Fn) {
             self.function_declaration();
@@ -948,7 +952,7 @@ impl Compiler {
     }
 
     fn statement(&mut self) {
-        let curr_type = self.tokens[self.current].token_type;
+        let curr_type = self.peek(0).token_type;
         match curr_type {
             TokenType::Print => self.print_statement(),
             TokenType::For => self.for_statement(),
