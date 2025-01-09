@@ -6,11 +6,11 @@ for i in 1..100 {
   }
   let j = 0;
   while j < 50 {
-    j = j + 1;
+    j+=1;
     if j < 20 {
       continue;
     }
-    total = total + j * i;
+    total += j*i;
   }
 }
 print total;

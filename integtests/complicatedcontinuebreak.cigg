@@ -14,11 +14,11 @@ for i in 10..50 {
             let l = k;
             while l < k + 5 {
                 if l % 3 == 0 {
-                    l = l + 2;
+                    l += 2;
                     continue;
                 }
-                sum = sum + i + j + k + l;
-                l = l + 1;
+                sum += i + j + k + l;
+                l += 1;
             }
         }
         if (j*i) % 23 == 0 {
