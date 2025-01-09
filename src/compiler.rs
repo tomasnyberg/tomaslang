@@ -87,6 +87,7 @@ impl Range {
 #[allow(dead_code)]
 pub enum OpCode {
     Constant,
+    Array,
     Add,
     Sub,
     Mul,
@@ -173,38 +174,39 @@ impl OpCode {
     pub fn from_u8(byte: u8) -> Self {
         match byte {
             0 => OpCode::Constant,
-            1 => OpCode::Add,
-            2 => OpCode::Sub,
-            3 => OpCode::Mul,
-            4 => OpCode::Div,
-            5 => OpCode::DivInt,
-            6 => OpCode::Equal,
-            7 => OpCode::Mod,
-            8 => OpCode::NotEqual,
-            9 => OpCode::Greater,
-            10 => OpCode::GreaterEqual,
-            11 => OpCode::DefineGlobal,
-            12 => OpCode::GetGlobal,
-            13 => OpCode::SetGlobal,
-            14 => OpCode::GetLocal,
-            15 => OpCode::SetLocal,
-            16 => OpCode::JumpIfFalse,
-            17 => OpCode::JumpIfTrue,
-            18 => OpCode::JumpIfNull,
-            19 => OpCode::Jump,
-            20 => OpCode::Loop,
-            21 => OpCode::Call,
-            22 => OpCode::Negate,
-            23 => OpCode::Not,
-            24 => OpCode::Next,
-            25 => OpCode::Pop,
-            26 => OpCode::Print,
-            27 => OpCode::Range,
-            28 => OpCode::Null,
-            29 => OpCode::True,
-            30 => OpCode::False,
-            31 => OpCode::Return,
-            32 => OpCode::Eof,
+            1 => OpCode::Array,
+            2 => OpCode::Add,
+            3 => OpCode::Sub,
+            4 => OpCode::Mul,
+            5 => OpCode::Div,
+            6 => OpCode::DivInt,
+            7 => OpCode::Equal,
+            8 => OpCode::Mod,
+            9 => OpCode::NotEqual,
+            10 => OpCode::Greater,
+            11 => OpCode::GreaterEqual,
+            12 => OpCode::DefineGlobal,
+            13 => OpCode::GetGlobal,
+            14 => OpCode::SetGlobal,
+            15 => OpCode::GetLocal,
+            16 => OpCode::SetLocal,
+            17 => OpCode::JumpIfFalse,
+            18 => OpCode::JumpIfTrue,
+            19 => OpCode::JumpIfNull,
+            20 => OpCode::Jump,
+            21 => OpCode::Loop,
+            22 => OpCode::Call,
+            23 => OpCode::Negate,
+            24 => OpCode::Not,
+            25 => OpCode::Next,
+            26 => OpCode::Pop,
+            27 => OpCode::Print,
+            28 => OpCode::Range,
+            29 => OpCode::Null,
+            30 => OpCode::True,
+            31 => OpCode::False,
+            32 => OpCode::Return,
+            33 => OpCode::Eof,
             _ => panic!("unexpected opcode (did you update this match after adding an op?)"),
         }
     }
@@ -230,6 +232,8 @@ impl Compiler {
         rule(RightParen,   None,                  None,               Precedence::None);
         rule(LeftBrace,    None,                  None,               Precedence::None);
         rule(RightBrace,   None,                  None,               Precedence::None);
+        rule(LeftBracket,  Some(Self::array),     None,               Precedence::Call);
+        rule(RightBracket, None,                  None,               Precedence::None);
         rule(Comma,        None,                  None,               Precedence::None);
         rule(Dot,          None,                  None,               Precedence::None);
         // Is precedence correct here? Not sure.
@@ -845,6 +849,19 @@ impl Compiler {
         self.emit_bytes(OpCode::Null as u8, OpCode::Return as u8);
         self.compiled_funcs
             .push(self.compiling_funcs.pop().unwrap());
+    }
+
+    fn array(&mut self) {
+        let mut count = 0;
+        while !self.check(TokenType::RightBracket) {
+            self.expression();
+            count += 1;
+            if !self.match_(TokenType::Comma) {
+                break;
+            }
+        }
+        self.consume(TokenType::RightBracket, "Expected ']' after array");
+        self.emit_bytes(OpCode::Array as u8, count);
     }
 
     fn local_var_declaration(&mut self, constant: bool, no_semicolon: bool) {

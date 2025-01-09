@@ -10,6 +10,7 @@ pub enum Value {
     String(String),
     Function(Function),
     Range(Range),
+    Array(Vec<Value>),
     ReturnAddress(usize),
 }
 
@@ -38,6 +39,17 @@ impl Value {
             Value::String(s) => s.to_string(),
             Value::Function(f) => format!("<fn {} (starts at {})>", f.name.lexeme, f.start),
             Value::Range(r) => r.as_debug_string(),
+            Value::Array(a) => {
+                let mut result = String::from("[");
+                for (i, value) in a.iter().enumerate() {
+                    result.push_str(&value.as_string());
+                    if i < a.len() - 1 {
+                        result.push_str(", ");
+                    }
+                }
+                result.push(']');
+                result
+            }
             Value::ReturnAddress(x) => format!("RA {x}"),
         }
     }
@@ -48,6 +60,10 @@ impl Value {
 
     pub fn is_number(&self) -> bool {
         matches!(self, Value::Number(_))
+    }
+
+    pub fn is_range(&self) -> bool {
+        matches!(self, Value::Range(_))
     }
 }
 
@@ -235,6 +251,7 @@ impl VM {
             Value::String(s) => !s.is_empty(),
             Value::Function(_) => true,
             Value::Range(_) => true,
+            Value::Array(a) => !a.is_empty(),
             Value::ReturnAddress(_) => {
                 panic!("Return address should not be possible to evaluate for truth")
             }
@@ -271,6 +288,29 @@ impl VM {
                 | OpCode::Greater
                 | OpCode::GreaterEqual => {
                     self.binary_op(instruction);
+                }
+                OpCode::Array => {
+                    let count = self.read_byte();
+                    let mut array = Vec::new();
+                    for _ in 0..count {
+                        let item = self.pop();
+                        if item.is_range() {
+                            let mut item = match item {
+                                Value::Range(r) => r,
+                                _ => unreachable!(),
+                            };
+                            let mut temp = Vec::new();
+                            while let Some(next) = item.next() {
+                                temp.push(Value::Number(next as f64));
+                            }
+                            temp.reverse();
+                            array.extend(temp);
+                            continue;
+                        }
+                        array.push(item);
+                    }
+                    array.reverse();
+                    self.push(Value::Array(array));
                 }
                 OpCode::Negate => {
                     let value: Value = self.pop();
