@@ -1,0 +1,30 @@
+// EXPECT 3902301
+let sum = 0;
+for i in 10..50 {
+    if i % 2 == 0 {
+        continue;
+    }
+    let j = i * 3;
+    while j < 500 {
+        j = j + i;
+        for k in 20..40 {
+            if k+j % 7 == 0 {
+                break;
+            }
+            let l = k;
+            while l < k + 5 {
+                if l % 3 == 0 {
+                    l = l + 2;
+                    continue;
+                }
+                sum = sum + i + j + k + l;
+                l = l + 1;
+            }
+        }
+        if (j*i) % 23 == 0 {
+            break;
+        }
+    }
+}
+print sum;
+
