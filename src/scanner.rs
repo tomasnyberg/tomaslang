@@ -36,6 +36,7 @@ pub enum TokenType {
     And,
     Class,
     Continue,
+    Break,
     Else,
     Elseif,
     False,
@@ -208,6 +209,7 @@ impl Scanner {
             "let" => Token::new(TokenType::Let, lexeme, self.line),
             "const" => Token::new(TokenType::Const, lexeme, self.line),
             "continue" => Token::new(TokenType::Continue, lexeme, self.line),
+            "break" => Token::new(TokenType::Break, lexeme, self.line),
             "while" => Token::new(TokenType::While, lexeme, self.line),
             _ => Token::new(TokenType::Identifier, lexeme, self.line),
         }
@@ -589,6 +591,26 @@ mod tests {
             TokenType::Number,
             TokenType::Star,
             TokenType::Number,
+            TokenType::Eof,
+        ];
+        verify_output(tokens, expected);
+    }
+
+    #[test]
+    fn parses_break() {
+        let input = "for i in 1..100 { break; }";
+        let tokens = super::scan(input);
+        let expected = vec![
+            TokenType::For,
+            TokenType::Identifier,
+            TokenType::In,
+            TokenType::Number,
+            TokenType::DotDot,
+            TokenType::Number,
+            TokenType::LeftBrace,
+            TokenType::Break,
+            TokenType::Semicolon,
+            TokenType::RightBrace,
             TokenType::Eof,
         ];
         verify_output(tokens, expected);

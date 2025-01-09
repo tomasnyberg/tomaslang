@@ -1,0 +1,40 @@
+// EXPECT 216560\n1169742790
+let tot = 0;
+for i in 1..100 {
+    let y = i*27;
+    while y % 5 != 0 {
+        y = y * 2 + 7;
+        if y % 3 == 0 {
+            break;
+        }
+        tot = tot + y;
+    }
+    if y == 27*58 {
+        break;
+    }
+}
+print tot;
+
+tot = 0;
+for i in 57..83 {
+    let j = 52;
+    while j * 2 < 4482 {
+        j = j + i;
+        for i in 52..100 {
+            if i > 70 {
+                break;
+            }
+            let k = 57;
+            while k < 59 {
+                tot = tot + j*i;
+                for l in 1..4 {
+                    tot = tot + 5;
+                    break;
+                }
+                k = k + 1;
+                break;
+            }
+        }
+    }
+}
+print tot;

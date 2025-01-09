@@ -17,8 +17,10 @@ struct Compiler {
     compiled_funcs: Vec<Function>,
     rules: HashMap<TokenType, ParseRule>,
     scope_depth: usize,
-    // For continue; keep track of (loop_start, scope_depth)
-    loop_tracker: Vec<(usize, usize)>,
+    // For continue: keep track of (loop_start, scope_depth)
+    loop_continue_tracker: Vec<(usize, usize)>,
+    // For break: keep track of jumps that want to jump to the end
+    loop_endjumps: Vec<Vec<usize>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -291,7 +293,8 @@ impl Compiler {
             compiled_funcs: Vec::new(),
             rules: Self::create_rules(),
             scope_depth: 0,
-            loop_tracker: Vec::new(),
+            loop_continue_tracker: Vec::new(),
+            loop_endjumps: Vec::new(),
         }
     }
 
@@ -603,6 +606,13 @@ impl Compiler {
         self.emit_byte(OpCode::Return as u8, true);
     }
 
+    fn patch_loop_exit_jumps(&mut self) {
+        let end_jumps = self.loop_endjumps.pop().unwrap();
+        for jump in end_jumps {
+            self.patch_jump(jump);
+        }
+    }
+
     fn for_statement(&mut self) {
         self.consume(TokenType::For, "Expected 'for' to start for loop");
         self.begin_scope();
@@ -622,12 +632,16 @@ impl Compiler {
         });
 
         let loop_start = active_chunk!(self).code.len();
-        self.loop_tracker.push((loop_start, self.scope_depth));
+        self.loop_continue_tracker
+            .push((loop_start, self.scope_depth));
 
         // Update the loop variable
         self.emit_byte(OpCode::Next as u8, true);
         self.emit_bytes(OpCode::SetLocal as u8, loop_var_idx);
+
         let exit_jump = self.emit_jump(OpCode::JumpIfNull);
+        self.loop_endjumps.push(vec![exit_jump]);
+
         self.emit_byte(OpCode::Pop as u8, true);
 
         // Loop body
@@ -635,9 +649,9 @@ impl Compiler {
         self.emit_loop(loop_start);
 
         // Loop end
-        self.patch_jump(exit_jump);
+        self.patch_loop_exit_jumps();
         self.end_scope(false);
-        self.loop_tracker.pop();
+        self.loop_continue_tracker.pop();
     }
 
     fn continue_statement(&mut self) {
@@ -646,11 +660,11 @@ impl Compiler {
             "Expected 'continue' to start continue statement",
         );
         self.consume(TokenType::Semicolon, "Expected ';' after 'continue'");
-        if self.loop_tracker.is_empty() {
+        if self.loop_continue_tracker.is_empty() {
             self.error_at_current("Cannot use 'continue' outside of a loop");
             return;
         }
-        let (loop_start, scope_depth) = *self.loop_tracker.last().unwrap();
+        let (loop_start, scope_depth) = *self.loop_continue_tracker.last().unwrap();
         let locals = &self.compiling_funcs.last_mut().unwrap().locals;
         let to_pop = locals
             .iter()
@@ -663,19 +677,40 @@ impl Compiler {
         self.emit_loop(loop_start);
     }
 
+    fn break_statement(&mut self) {
+        self.consume(
+            TokenType::Break,
+            "Expected 'break' to start break statement",
+        );
+        self.consume(TokenType::Semicolon, "Expected ';' after 'break'");
+        if self.loop_endjumps.is_empty() {
+            self.error_at_current("Cannot use 'break' outside of a loop");
+            return;
+        }
+        let exit_jump: usize = self.emit_jump(OpCode::Jump);
+        self.loop_endjumps.last_mut().unwrap().push(exit_jump);
+    }
+
     fn while_statement(&mut self) {
         self.consume(TokenType::While, "Expected 'while' to start while loop");
         let chunk = active_chunk!(self);
         let loop_start: usize = chunk.code.len();
-        self.loop_tracker.push((loop_start, self.scope_depth));
+        self.loop_continue_tracker
+            .push((loop_start, self.scope_depth));
         self.expression();
         let exit_jump: usize = self.emit_jump(OpCode::JumpIfFalse);
+        self.loop_endjumps.push(Vec::new());
         self.emit_byte(OpCode::Pop as u8, true);
         self.statement();
         self.emit_loop(loop_start);
+
         self.patch_jump(exit_jump);
+        // Pop the condition value if we took the exit jump
         self.emit_byte(OpCode::Pop as u8, true);
-        self.loop_tracker.pop();
+        // If we broke out of the loop, the condition value already popped
+        // So we jump to after the above pop :)
+        self.patch_loop_exit_jumps();
+        self.loop_continue_tracker.pop();
     }
 
     fn begin_scope(&mut self) {
@@ -903,6 +938,7 @@ impl Compiler {
             TokenType::If => self.if_statement(),
             TokenType::Return => self.return_statement(),
             TokenType::While => self.while_statement(),
+            TokenType::Break => self.break_statement(),
             TokenType::Continue => self.continue_statement(),
             TokenType::LeftBrace => {
                 self.begin_scope();

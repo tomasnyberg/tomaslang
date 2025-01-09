@@ -1,0 +1,16 @@
+// EXPECT 1\n2\n3\n4\n1\n2
+for i in 1..10 {
+    if i == 5 {
+        break;
+    }
+    print i;
+}
+
+let i = 0;
+while i < 10 {
+    i = i + 1;
+    if i == 3 {
+        break;
+    }
+    print i;
+}
