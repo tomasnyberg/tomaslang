@@ -1,0 +1,16 @@
+// EXPECT 3092250
+let total = 0;
+for i in 1..100 {
+  if i > 75 {
+    continue;
+  }
+  let j = 0;
+  while j < 50 {
+    j = j + 1;
+    if j < 20 {
+      continue;
+    }
+    total = total + j * i;
+  }
+}
+print total;

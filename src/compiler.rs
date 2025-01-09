@@ -663,6 +663,7 @@ impl Compiler {
         self.consume(TokenType::While, "Expected 'while' to start while loop");
         let chunk = active_chunk!(self);
         let loop_start: usize = chunk.code.len();
+        self.loop_tracker.push((loop_start, self.scope_depth));
         self.expression();
         let exit_jump: usize = self.emit_jump(OpCode::JumpIfFalse);
         self.emit_byte(OpCode::Pop as u8, true);
@@ -670,6 +671,7 @@ impl Compiler {
         self.emit_loop(loop_start);
         self.patch_jump(exit_jump);
         self.emit_byte(OpCode::Pop as u8, true);
+        self.loop_tracker.pop();
     }
 
     fn begin_scope(&mut self) {

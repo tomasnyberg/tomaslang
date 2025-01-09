@@ -1,0 +1,9 @@
+// EXPECT 1\n2\n3\n5
+let i = 0;
+while i < 5 {
+  i = i + 1;
+  if i == 4 {
+    continue;
+  }
+  print i;
+}
