@@ -309,7 +309,9 @@ impl VM {
         let target = match reference {
             Value::Reference(r) => &mut self.stack[r],
             _ => {
-                self.runtime_error(format!("Cannot index {:?}", reference).as_str());
+                self.runtime_error(
+                    format!("Cannot index this: {:?} (expected a reference)", reference).as_str(),
+                );
                 return;
             }
         };
