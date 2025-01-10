@@ -1,0 +1,3 @@
+// EXPECT ERR Index out of bounds at [line 3] in script\nRuntime error
+let xs = [1..5];
+print xs[5];

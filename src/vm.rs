@@ -74,6 +74,14 @@ impl Value {
     pub fn is_range(&self) -> bool {
         matches!(self, Value::Range(_))
     }
+
+    pub fn inbounds_check(&self, index: usize) -> bool {
+        match self {
+            Value::Array(a) => index < a.len(),
+            Value::String(s) => index < s.len(),
+            _ => false,
+        }
+    }
 }
 
 impl fmt::Display for Value {
@@ -298,6 +306,36 @@ impl VM {
                 | OpCode::Greater
                 | OpCode::GreaterEqual => {
                     self.binary_op(instruction);
+                }
+                OpCode::Access => {
+                    let index = self.pop();
+                    let index = match index {
+                        Value::Number(n) => n as usize,
+                        _ => {
+                            self.runtime_error("Expected number for index");
+                            return VmResult::RuntimeError;
+                        }
+                    };
+                    let reference = self.pop();
+                    let target = match reference {
+                        Value::Reference(r) => &mut self.stack[r],
+                        _ => {
+                            self.runtime_error(format!("Cannot index {:?}", reference).as_str());
+                            return VmResult::RuntimeError;
+                        }
+                    };
+
+                    if !target.inbounds_check(index) {
+                        self.runtime_error("Index out of bounds");
+                        return VmResult::RuntimeError;
+                    }
+
+                    let result = match target {
+                        Value::Array(a) => a[index].clone(),
+                        Value::String(s) => Value::String(s.as_bytes()[index].to_string()),
+                        _ => unreachable!(),
+                    };
+                    self.push(result);
                 }
                 OpCode::Array => {
                     let count = self.read_byte();
