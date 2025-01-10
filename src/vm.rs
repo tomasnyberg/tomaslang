@@ -285,6 +285,59 @@ impl VM {
         name.as_string()
     }
 
+    fn access_ops(&mut self, op: OpCode) {
+        let mut value_to_set = Value::Null;
+        if op == OpCode::AccessSet {
+            value_to_set = self.pop();
+        }
+        let index = self.pop();
+        let index = match index {
+            Value::Number(n) => n as usize,
+            _ => {
+                self.runtime_error("Expected number for index");
+                return;
+            }
+        };
+        // If it's a set, the whole thing will be an expression statement
+        // and pop at the end. So leave the reference on the stack to
+        // account for that one.
+        let reference: Value = if op == OpCode::AccessSet {
+            self.peek(0).clone()
+        } else {
+            self.pop()
+        };
+        let target = match reference {
+            Value::Reference(r) => &mut self.stack[r],
+            _ => {
+                self.runtime_error(format!("Cannot index {:?}", reference).as_str());
+                return;
+            }
+        };
+
+        if !target.inbounds_check(index) {
+            self.runtime_error("Index out of bounds");
+            return;
+        }
+        match op {
+            OpCode::Access => {
+                let result = match target {
+                    Value::Array(a) => a[index].clone(),
+                    Value::String(s) => Value::String((s.as_bytes()[index] as char).to_string()),
+                    _ => unreachable!(),
+                };
+                self.push(result);
+            }
+            OpCode::AccessSet => match target {
+                Value::Array(a) => a[index] = value_to_set,
+                Value::String(_) => {
+                    todo!();
+                }
+                _ => unreachable!(),
+            },
+            _ => unreachable!(),
+        }
+    }
+
     pub fn run(&mut self) -> VmResult {
         loop {
             self.trace_execution();
@@ -307,37 +360,8 @@ impl VM {
                 | OpCode::GreaterEqual => {
                     self.binary_op(instruction);
                 }
-                OpCode::Access => {
-                    let index = self.pop();
-                    let index = match index {
-                        Value::Number(n) => n as usize,
-                        _ => {
-                            self.runtime_error("Expected number for index");
-                            return VmResult::RuntimeError;
-                        }
-                    };
-                    let reference = self.pop();
-                    let target = match reference {
-                        Value::Reference(r) => &mut self.stack[r],
-                        _ => {
-                            self.runtime_error(format!("Cannot index {:?}", reference).as_str());
-                            return VmResult::RuntimeError;
-                        }
-                    };
-
-                    if !target.inbounds_check(index) {
-                        self.runtime_error("Index out of bounds");
-                        return VmResult::RuntimeError;
-                    }
-
-                    let result = match target {
-                        Value::Array(a) => a[index].clone(),
-                        Value::String(s) => {
-                            Value::String((s.as_bytes()[index] as char).to_string())
-                        }
-                        _ => unreachable!(),
-                    };
-                    self.push(result);
+                OpCode::Access | OpCode::AccessSet => {
+                    self.access_ops(instruction);
                 }
                 OpCode::Array => {
                     let count = self.read_byte();

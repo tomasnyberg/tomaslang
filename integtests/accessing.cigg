@@ -1,6 +1,14 @@
-// EXPECT 4\ne
+// EXPECT 4\ne\n10\n100
 let xs = [1..5];
 print xs[3];
 let s = "hej";
 print s[1];
+
+xs[0] = 10;
+print xs[0];
+
+let idx = 3;
+let y = 100;
+xs[idx] = y;
+print xs[idx];
 

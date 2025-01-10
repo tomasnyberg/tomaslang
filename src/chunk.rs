@@ -59,7 +59,8 @@ impl Chunk {
         let instruction: OpCode = OpCode::from_u8(self.code[offset]);
         match instruction {
             OpCode::Constant => self.constant_instruction("CONSTANT_OP", offset),
-            OpCode::Access => self.byte_instruction("ACCESS_OP", offset),
+            OpCode::Access => self.simple_instruction("ACCESS_OP", offset),
+            OpCode::AccessSet => self.simple_instruction("ACCESS_SET_OP", offset),
             OpCode::Array => self.byte_instruction("ARRAY_OP", offset),
             OpCode::Add => self.simple_instruction("ADD_OP", offset),
             OpCode::Sub => self.simple_instruction("SUB_OP", offset),
