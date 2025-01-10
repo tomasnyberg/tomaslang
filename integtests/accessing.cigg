@@ -1,3 +1,6 @@
-// EXPECT 4
+// EXPECT 4\ne
 let xs = [1..5];
 print xs[3];
+let s = "hej";
+print s[1];
+

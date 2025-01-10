@@ -332,7 +332,9 @@ impl VM {
 
                     let result = match target {
                         Value::Array(a) => a[index].clone(),
-                        Value::String(s) => Value::String(s.as_bytes()[index].to_string()),
+                        Value::String(s) => {
+                            Value::String((s.as_bytes()[index] as char).to_string())
+                        }
                         _ => unreachable!(),
                     };
                     self.push(result);
