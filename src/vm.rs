@@ -10,6 +10,7 @@ pub enum Value {
     String(String),
     Function(Function),
     Range(Range),
+    Reference(usize),
     Array(Vec<Value>),
     ReturnAddress(usize),
 }
@@ -39,6 +40,7 @@ impl Value {
             Value::String(s) => s.to_string(),
             Value::Function(f) => format!("<fn {} (starts at {})>", f.name.lexeme, f.start),
             Value::Range(r) => r.as_debug_string(),
+            Value::Reference(id) => format!("<ref [{}]>", id),
             Value::Array(a) => {
                 let mut result = String::from("[");
                 for (i, value) in a.iter().enumerate() {
@@ -51,6 +53,13 @@ impl Value {
                 result
             }
             Value::ReturnAddress(x) => format!("RA {x}"),
+        }
+    }
+
+    pub fn as_string_with_stack(&self, stack: &[Value]) -> String {
+        match self {
+            Value::Reference(r) => stack[*r].as_string_with_stack(stack),
+            _ => self.as_string(),
         }
     }
 
@@ -251,6 +260,7 @@ impl VM {
             Value::String(s) => !s.is_empty(),
             Value::Function(_) => true,
             Value::Range(_) => true,
+            Value::Reference(r) => self.is_truthy(&self.stack[*r]),
             Value::Array(a) => !a.is_empty(),
             Value::ReturnAddress(_) => {
                 panic!("Return address should not be possible to evaluate for truth")
@@ -348,20 +358,24 @@ impl VM {
                     self.pop();
                 }
                 OpCode::Extend => {
-                    unimplemented!();
-                }
-                OpCode::ExtendInPlace => {
-                    let local_idx = self.local_idx_on_stack();
-                    let new_element = self.peek(0).clone();
-                    let target_value = &mut self.stack[local_idx];
-                    match target_value {
-                        Value::Array(a) => a.push(new_element),
-                        Value::String(a) => a.push_str(&new_element.as_string()),
+                    let to_append = self.pop();
+                    let target = self.pop();
+                    let target = match target {
+                        Value::Reference(a) => &mut self.stack[a],
                         _ => {
-                            self.runtime_error("Expected array");
+                            self.runtime_error("Expected reference");
+                            return VmResult::RuntimeError;
+                        }
+                    };
+                    match target {
+                        Value::Array(a) => a.push(to_append),
+                        Value::String(a) => a.push_str(&to_append.as_string()),
+                        _ => {
+                            self.runtime_error("Expected array or string");
                             return VmResult::RuntimeError;
                         }
                     }
+                    self.push(Value::Null);
                 }
                 OpCode::DefineGlobal => {
                     let name = self.global_identifier();
@@ -389,7 +403,11 @@ impl VM {
                 }
                 OpCode::GetLocal => {
                     let idx = self.local_idx_on_stack();
-                    let value = self.stack[idx].clone();
+                    let value = match self.stack[idx] {
+                        Value::Array(_) => Value::Reference(idx),
+                        Value::String(_) => Value::Reference(idx),
+                        _ => self.stack[idx].clone(),
+                    };
                     self.push(value);
                 }
                 OpCode::SetLocal => {
@@ -446,7 +464,7 @@ impl VM {
                     self.insert(return_address, self.stack.len() - arg_c - 1);
                     self.frame_starts.push(self.stack.len() - arg_c - 1);
                 }
-                OpCode::Print => println!("{}", self.pop()),
+                OpCode::Print => println!("{}", self.pop().as_string_with_stack(&self.stack)),
                 OpCode::Range => {
                     let end = self.pop().as_number() as i32;
                     let start = self.pop().as_number() as i32;

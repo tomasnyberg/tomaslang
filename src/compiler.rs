@@ -94,7 +94,6 @@ pub enum OpCode {
     Div,
     DivInt,
     Extend,
-    ExtendInPlace,
     Equal,
     Mod,
     NotEqual,
@@ -183,34 +182,33 @@ impl OpCode {
             5 => OpCode::Div,
             6 => OpCode::DivInt,
             7 => OpCode::Extend,
-            8 => OpCode::ExtendInPlace,
-            9 => OpCode::Equal,
-            10 => OpCode::Mod,
-            11 => OpCode::NotEqual,
-            12 => OpCode::Greater,
-            13 => OpCode::GreaterEqual,
-            14 => OpCode::DefineGlobal,
-            15 => OpCode::GetGlobal,
-            16 => OpCode::SetGlobal,
-            17 => OpCode::GetLocal,
-            18 => OpCode::SetLocal,
-            19 => OpCode::JumpIfFalse,
-            20 => OpCode::JumpIfTrue,
-            21 => OpCode::JumpIfNull,
-            22 => OpCode::Jump,
-            23 => OpCode::Loop,
-            24 => OpCode::Call,
-            25 => OpCode::Negate,
-            26 => OpCode::Not,
-            27 => OpCode::Next,
-            28 => OpCode::Pop,
-            29 => OpCode::Print,
-            30 => OpCode::Range,
-            31 => OpCode::Null,
-            32 => OpCode::True,
-            33 => OpCode::False,
-            34 => OpCode::Return,
-            35 => OpCode::Eof,
+            8 => OpCode::Equal,
+            9 => OpCode::Mod,
+            10 => OpCode::NotEqual,
+            11 => OpCode::Greater,
+            12 => OpCode::GreaterEqual,
+            13 => OpCode::DefineGlobal,
+            14 => OpCode::GetGlobal,
+            15 => OpCode::SetGlobal,
+            16 => OpCode::GetLocal,
+            17 => OpCode::SetLocal,
+            18 => OpCode::JumpIfFalse,
+            19 => OpCode::JumpIfTrue,
+            20 => OpCode::JumpIfNull,
+            21 => OpCode::Jump,
+            22 => OpCode::Loop,
+            23 => OpCode::Call,
+            24 => OpCode::Negate,
+            25 => OpCode::Not,
+            26 => OpCode::Next,
+            27 => OpCode::Pop,
+            28 => OpCode::Print,
+            29 => OpCode::Range,
+            30 => OpCode::Null,
+            31 => OpCode::True,
+            32 => OpCode::False,
+            33 => OpCode::Return,
+            34 => OpCode::Eof,
             _ => panic!("unexpected opcode (did you update this match after adding an op?)"),
         }
     }
@@ -239,6 +237,7 @@ impl Compiler {
         rule(LeftBracket,  Some(Self::array),     None,               Precedence::Call);
         rule(RightBracket, None,                  None,               Precedence::None);
         rule(Comma,        None,                  None,               Precedence::None);
+        rule(Colon,        None,                  Some(Self::append), Precedence::Term);
         rule(Dot,          None,                  None,               Precedence::None);
         // Is precedence correct here? Not sure.
         rule(DotDot,       None,                  Some(Self::range),  Precedence::Term);
@@ -427,16 +426,6 @@ impl Compiler {
                 self.emit_compound_operator(operator);
                 self.emit_bytes(set_op as u8, arg);
             }
-            TokenType::ColonEqual => {
-                assert!(
-                    set_op == OpCode::SetLocal,
-                    ":= not supported for globals (yet)"
-                );
-                self.advance();
-                self.ensure_not_const(resolved, arg as usize);
-                self.expression();
-                self.emit_bytes(OpCode::ExtendInPlace as u8, arg);
-            }
             _ => self.emit_bytes(get_op as u8, arg),
         }
     }
@@ -599,6 +588,11 @@ impl Compiler {
         let rule: ParseRule = self.rules[&operator];
         self.parse_precedence(rule.precedence.next());
         self.emit_operator(operator);
+    }
+
+    fn append(&mut self) {
+        self.expression();
+        self.emit_byte(OpCode::Extend as u8, true);
     }
 
     fn expression(&mut self) {
