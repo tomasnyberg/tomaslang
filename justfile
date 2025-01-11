@@ -26,3 +26,7 @@ runfile filename:
 
 runfile-release filename:
   cargo run --release -- {{filename}}
+
+build-cigg:
+  cargo build --release
+  sudo cp ./target/release/tomaslang /usr/bin/cigg
