@@ -17,10 +17,11 @@ pub enum Value {
 #[allow(dead_code)]
 impl Value {
     pub fn as_number(&self) -> f64 {
+        let panic_message = format!("Expected number, got {:?}", self);
         match self {
             Value::Number(n) => *n,
             // TODO: Not sure if this should behave differently for other types?
-            _ => panic!("Expected number"),
+            _ => panic!("{}", panic_message),
         }
     }
 
