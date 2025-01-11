@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt};
+use std::{cell::RefCell, collections::HashMap, fmt, rc::Rc};
 
 use crate::{chunk::Chunk, compiler::Function, compiler::OpCode, compiler::Range};
 
@@ -7,11 +7,10 @@ pub enum Value {
     Number(f64),
     Bool(bool),
     Null,
-    String(String),
+    String(Rc<RefCell<Vec<char>>>),
     Function(Function),
     Range(Range),
-    Reference(usize),
-    Array(Vec<Value>),
+    Array(Rc<RefCell<Vec<Value>>>),
     ReturnAddress(usize),
 }
 
@@ -37,14 +36,14 @@ impl Value {
             Value::Number(n) => n.to_string(),
             Value::Bool(b) => b.to_string(),
             Value::Null => "null".to_string(),
-            Value::String(s) => s.to_string(),
+            Value::String(s) => s.borrow().iter().collect(),
             Value::Function(f) => format!("<fn {} (starts at {})>", f.name.lexeme, f.start),
             Value::Range(r) => r.as_debug_string(),
-            Value::Reference(id) => format!("<ref [{}]>", id),
             Value::Array(a) => {
+                let a = a.borrow();
                 let mut result = String::from("[");
-                for (i, value) in a.iter().enumerate() {
-                    result.push_str(&value.as_string());
+                for (i, item) in a.iter().enumerate() {
+                    result.push_str(&item.as_string());
                     if i < a.len() - 1 {
                         result.push_str(", ");
                     }
@@ -53,13 +52,6 @@ impl Value {
                 result
             }
             Value::ReturnAddress(x) => format!("RA {x}"),
-        }
-    }
-
-    pub fn as_string_with_stack(&self, stack: &[Value]) -> String {
-        match self {
-            Value::Reference(r) => stack[*r].as_string_with_stack(stack),
-            _ => self.as_string(),
         }
     }
 
@@ -77,8 +69,8 @@ impl Value {
 
     pub fn inbounds_check(&self, index: usize) -> bool {
         match self {
-            Value::Array(a) => index < a.len(),
-            Value::String(s) => index < s.len(),
+            Value::Array(a) => index < a.borrow().len(),
+            Value::String(s) => index < s.borrow().len(),
             _ => false,
         }
     }
@@ -185,7 +177,7 @@ impl VM {
                     let mut a = a.as_string();
                     let b = b.as_string();
                     a.push_str(&b);
-                    self.push(Value::String(a));
+                    self.push(Value::String(Rc::new(RefCell::new(a.chars().collect()))));
                     return;
                 }
                 self.push(Value::Number(a.as_number() + b.as_number()));
@@ -200,7 +192,9 @@ impl VM {
             OpCode::Mul => {
                 if a.is_string() && b.is_number() {
                     let (a, b) = (a.as_string(), b.as_number());
-                    self.push(Value::String(a.repeat(b as usize)));
+                    self.push(Value::String(Rc::new(RefCell::new(
+                        a.chars().cycle().take(a.len() * b as usize).collect(),
+                    ))));
                     return;
                 }
                 if !a.is_number() || !b.is_number() {
@@ -265,11 +259,10 @@ impl VM {
             Value::Bool(b) => *b,
             Value::Null => false,
             Value::Number(n) => *n != 0.0,
-            Value::String(s) => !s.is_empty(),
+            Value::String(s) => !s.borrow().is_empty(),
             Value::Function(_) => true,
             Value::Range(_) => true,
-            Value::Reference(r) => self.is_truthy(&self.stack[*r]),
-            Value::Array(a) => !a.is_empty(),
+            Value::Array(a) => !a.borrow().is_empty(),
             Value::ReturnAddress(_) => {
                 panic!("Return address should not be possible to evaluate for truth")
             }
@@ -307,11 +300,9 @@ impl VM {
             self.pop()
         };
         let target = match reference {
-            Value::Reference(r) => &mut self.stack[r],
+            Value::Array(_) | Value::String(_) => reference,
             _ => {
-                self.runtime_error(
-                    format!("Cannot index this: {:?} (expected a reference)", reference).as_str(),
-                );
+                self.runtime_error("Expected array or string");
                 return;
             }
         };
@@ -323,14 +314,17 @@ impl VM {
         match op {
             OpCode::Access => {
                 let result = match target {
-                    Value::Array(a) => a[index].clone(),
-                    Value::String(s) => Value::String((s.as_bytes()[index] as char).to_string()),
+                    Value::Array(a) => a.borrow()[index].clone(),
+                    Value::String(s) => {
+                        let s = s.borrow();
+                        Value::String(Rc::new(RefCell::new(vec![s[index]])))
+                    }
                     _ => unreachable!(),
                 };
                 self.push(result);
             }
             OpCode::AccessSet => match target {
-                Value::Array(a) => a[index] = value_to_set,
+                Value::Array(a) => a.borrow_mut()[index] = value_to_set,
                 Value::String(_) => {
                     todo!();
                 }
@@ -386,7 +380,7 @@ impl VM {
                         array.push(item);
                     }
                     array.reverse();
-                    self.push(Value::Array(array));
+                    self.push(Value::Array(Rc::new(RefCell::new(array))));
                 }
                 OpCode::Negate => {
                     let value: Value = self.pop();
@@ -426,16 +420,9 @@ impl VM {
                 OpCode::Extend => {
                     let to_append = self.pop();
                     let target = self.pop();
-                    let target = match target {
-                        Value::Reference(a) => &mut self.stack[a],
-                        _ => {
-                            self.runtime_error("Expected reference");
-                            return VmResult::RuntimeError;
-                        }
-                    };
                     match target {
-                        Value::Array(a) => a.push(to_append),
-                        Value::String(a) => a.push_str(&to_append.as_string()),
+                        Value::Array(a) => a.borrow_mut().push(to_append),
+                        Value::String(a) => a.borrow_mut().extend(to_append.as_string().chars()),
                         _ => {
                             self.runtime_error("Expected array or string");
                             return VmResult::RuntimeError;
@@ -469,11 +456,7 @@ impl VM {
                 }
                 OpCode::GetLocal => {
                     let idx = self.local_idx_on_stack();
-                    let value = match self.stack[idx] {
-                        Value::Array(_) => Value::Reference(idx),
-                        Value::String(_) => Value::Reference(idx),
-                        _ => self.stack[idx].clone(),
-                    };
+                    let value = self.stack[idx].clone();
                     self.push(value);
                 }
                 OpCode::SetLocal => {
@@ -530,7 +513,7 @@ impl VM {
                     self.insert(return_address, self.stack.len() - arg_c - 1);
                     self.frame_starts.push(self.stack.len() - arg_c - 1);
                 }
-                OpCode::Print => println!("{}", self.pop().as_string_with_stack(&self.stack)),
+                OpCode::Print => println!("{}", self.pop().as_string()),
                 OpCode::Range => {
                     let end = self.pop().as_number() as i32;
                     let start = self.pop().as_number() as i32;

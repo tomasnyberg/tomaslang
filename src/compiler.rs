@@ -1,5 +1,6 @@
-use std::collections::HashMap;
 use std::ops::Shr;
+use std::rc::Rc;
+use std::{cell::RefCell, collections::HashMap};
 
 use crate::{chunk::*, scanner::*, vm::Value};
 
@@ -500,7 +501,9 @@ impl Compiler {
     fn string(&mut self) {
         if self.peek(1).token_type == TokenType::String {
             let string = self.peek(1).lexeme.clone();
-            self.emit_constant(Value::String(string));
+            let string: Vec<char> = string.chars().collect();
+            let string: Value = Value::String(Rc::new(RefCell::new(string)));
+            self.emit_constant(string);
             return;
         }
         self.error_at_current("Expected string");
@@ -831,7 +834,7 @@ impl Compiler {
 
     fn identifier_constant(&mut self) -> u8 {
         let identifier = self.peek(1).lexeme.clone();
-        let value = Value::String(identifier);
+        let value = Value::String(Rc::new(RefCell::new(identifier.chars().collect())));
         self.make_constant(value)
     }
 
