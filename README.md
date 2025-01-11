@@ -34,10 +34,7 @@ fn sieve(n) {
             i += p;
         }
     }
-    let prime = [];
-    for i in 0..(n + 1) {
-      prime : true;
-    }
+    let prime = [true]*(count + 1);
     let p = 2;
     while p * p <= n {
       if prime[p] {

@@ -29,10 +29,7 @@
 // EXPECT MULTI END
 */
 let count = 100;
-let prime = [];
-for i in 0..(count + 1) {
-  prime : true;
-}
+let prime = [true]*(count + 1);
 let p = 2;
 while p * p <= count {
   if prime[p] {

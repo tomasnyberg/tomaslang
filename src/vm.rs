@@ -68,6 +68,10 @@ impl Value {
         matches!(self, Value::Range(_))
     }
 
+    pub fn is_array(&self) -> bool {
+        matches!(self, Value::Array(_))
+    }
+
     pub fn inbounds_check(&self, index: usize) -> bool {
         match self {
             Value::Array(a) => index < a.borrow().len(),
@@ -196,6 +200,19 @@ impl VM {
                     self.push(Value::String(Rc::new(RefCell::new(
                         a.chars().cycle().take(a.len() * b as usize).collect(),
                     ))));
+                    return;
+                }
+                if a.is_array() && b.is_number() {
+                    let a = match a {
+                        Value::Array(a) => a,
+                        _ => unreachable!(),
+                    };
+                    let b = b.as_number();
+                    let mut result = Vec::new();
+                    for _ in 0..(b as usize) {
+                        result.extend(a.borrow().iter().cloned());
+                    }
+                    self.push(Value::Array(Rc::new(RefCell::new(result))));
                     return;
                 }
                 if !a.is_number() || !b.is_number() {
