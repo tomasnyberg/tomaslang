@@ -34,7 +34,7 @@ fn sieve(n) {
             i += p;
         }
     }
-    let prime = [true]*(count + 1);
+    let prime = [true]*(n + 1);
     let p = 2;
     while p * p <= n {
       if prime[p] {
@@ -50,7 +50,8 @@ fn sieve(n) {
     }
     return result;
 }
-print sieve(100);
+// prints [1, 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47]
+print sieve(50);
 ```
 
 ## Usage / Installation
