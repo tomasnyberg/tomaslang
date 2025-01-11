@@ -66,26 +66,43 @@ def verify_output(expecteds, outs, filename):
             print(f"Got {output_type}:")
             print(result)
             find_diff(expected, result)
-            break
+            return False
     else:
         print(f"integ test {filename} \033[32mpassed\033[0m")
+        return True
+
+
+def run_whole_dir(directory):
+    passed = 0
+    failed = 0
+    for filename in os.listdir(directory):
+        if os.path.isdir(directory + filename):
+            continue
+        expecteds = find_expecteds(directory + filename)
+        stdout, stderr = run_file(directory + filename)
+        if verify_output(expecteds, [stdout, stderr], filename):
+            passed += 1
+        else:
+            failed += 1
+    return (passed, failed)
 
 
 def normal_integration_tests():
-    for filename in os.listdir("integtests"):
-        if os.path.isdir("integtests/" + filename):
-            continue
-        expecteds = find_expecteds("integtests/" + filename)
-        stdout, stderr = run_file("integtests/" + filename)
-        verify_output(expecteds, [stdout, stderr], filename)
+    passed, failed = run_whole_dir("integtests/")
+    if failed == 0:
+        print(
+            f"Normal integration tests:\n\033[32mAll {passed} tests passed\033[0m")
+    else:
+        print(f"Normal integration tests:\n\033[31m{failed} failed\033[0m")
 
 
 def debug_integration_tests():
-    base = "integtests/debug/"
-    for filename in os.listdir(base):
-        expecteds = find_expecteds(base + filename)
-        stdout, stderr = run_file(base + filename)
-        verify_output(expecteds, [stdout, stderr], filename)
+    passed, failed = run_whole_dir("integtests/debug/")
+    if failed == 0:
+        print(
+            f"Debug integration tests:\n\033[32mAll {passed} tests passed\033[0m")
+    else:
+        print(f"Debug integration tests:\n\033[31m{failed} failed\033[0m")
 
 
 if __name__ == "__main__":
