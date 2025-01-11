@@ -1,6 +1,6 @@
 // EXPECT 5\n110\n100\n10
 global ten = 10;
-fn f() {
+fn f(z) {
   let x = 5;
   print x;
   fn g() {
@@ -15,4 +15,4 @@ fn f() {
   print x + g;
 }
 
-f();
+f(100);

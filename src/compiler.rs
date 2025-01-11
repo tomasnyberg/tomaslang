@@ -676,7 +676,9 @@ impl Compiler {
     fn for_statement(&mut self) {
         self.consume(TokenType::For, "Expected 'for' to start for loop");
         self.begin_scope();
-        self.local_var_declaration(false, true); // Loop variable
+        self.implicit_local_var("loop variable name");
+        // The loop variable needs to actually be on the stack. emit null until it gets set a value
+        self.emit_byte(OpCode::Null as u8, true);
         let loop_var_name = self.peek(1).clone();
         let loop_var_idx = self.resolve_local(&loop_var_name).unwrap();
         self.consume(TokenType::In, "Expected 'in' after for loop variable");
@@ -887,7 +889,7 @@ impl Compiler {
         if !self.check(TokenType::RightParen) {
             let mut arity = 0;
             while !self.check(TokenType::RightParen) {
-                self.local_var_declaration(false, true);
+                self.implicit_local_var("parameter name");
                 arity += 1;
                 if !self.match_(TokenType::Comma) {
                     break;
@@ -931,9 +933,7 @@ impl Compiler {
         self.emit_byte(OpCode::Access as u8, true);
     }
 
-    fn local_var_declaration(&mut self, constant: bool, no_semicolon: bool) {
-        self.consume(TokenType::Identifier, "Expected variable name");
-        let name = self.peek(1).clone();
+    fn valid_local(&mut self, name: &Token) -> bool {
         let duplicate_exists: bool =
             self.compiling_funcs
                 .last()
@@ -945,16 +945,40 @@ impl Compiler {
                 });
         if duplicate_exists {
             self.error_at_current("Variable with this name already declared in this scope");
+            return false;
         }
-        let locals = &mut self.compiling_funcs.last_mut().unwrap().locals;
-        if locals.len() == 256 {
+        if self.compiling_funcs.last().unwrap().locals.len() >= 256 {
             self.error_at_current("Too many local variables :(");
+            return false;
+        }
+        true
+    }
+
+    // For e.g. loop variables, parameters (they are local variables)
+    fn implicit_local_var(&mut self, local_type: &str) {
+        self.consume(TokenType::Identifier, &format!("Expected {}", local_type));
+        let name = self.peek(1).clone();
+        if !self.valid_local(&name) {
             return;
         }
-        // TODO: We should not push this if a duplicate was found?
+        let locals = &mut self.compiling_funcs.last_mut().unwrap().locals;
         locals.push(Local {
             name,
-            depth: -1, // Maybe -1 to avoid let a = a?
+            depth: self.scope_depth as i32,
+            constant: false,
+        });
+    }
+
+    fn local_var_declaration(&mut self, constant: bool) {
+        self.consume(TokenType::Identifier, "Expected variable name");
+        let name = self.peek(1).clone();
+        if !self.valid_local(&name) {
+            return;
+        }
+        let locals = &mut self.compiling_funcs.last_mut().unwrap().locals;
+        locals.push(Local {
+            name,
+            depth: -1,
             constant,
         });
 
@@ -970,9 +994,6 @@ impl Compiler {
         }
         let locals = &mut self.compiling_funcs.last_mut().unwrap().locals;
         locals.last_mut().unwrap().depth = self.scope_depth as i32;
-        if no_semicolon {
-            return;
-        }
         self.consume(
             TokenType::Semicolon,
             "Expected ';' after variable declaration",
@@ -985,7 +1006,7 @@ impl Compiler {
             self.global_declaration();
         } else if self.match_(TokenType::Let) || self.match_(TokenType::Const) {
             let constant = self.peek(1).token_type == TokenType::Const;
-            self.local_var_declaration(constant, false);
+            self.local_var_declaration(constant);
         } else if self.match_(TokenType::Fn) {
             self.function_declaration();
         } else {
