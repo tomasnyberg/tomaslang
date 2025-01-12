@@ -21,7 +21,7 @@
 - [X] constant variables
 - [X] break / continue
 - [X] Nested functions
-- [ ] Lambdas (preferrably JavaSript-like ones)
+- [ ] Lambdas (preferably JavaSript-like ones)
 - [ ] Ternary
 - [ ] Rust-like match
 - [ ] Multiline strings
@@ -29,9 +29,9 @@
 ## Syntax sugar
 - [x] Rust-like iterators, e.g. `for i in 1..5 {}`
 - [x] Haskell-like list generation, e.g. `[1..5]`
-- [X] compound assignment (e.g. `+=`, `*=`)
+- [X] compound assignment, e.g. `+=`, `*=`
 - [X] Python-like list generation, e.g. `[True]*100`
-- [ ] Haskell-like list transformations (e.g. `map (+5) [1,2,3,4,5]`)
+- [ ] Haskell-like list transformations, e.g. `map (+5) [1,2,3,4,5]`
 - [ ] Python-like list comprehensions, e.g. `[x*5 for x in xs]`
 
 ## Syntax sugar (sweetness++)
