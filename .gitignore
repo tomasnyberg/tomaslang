@@ -1,2 +1,6 @@
 /target
 test.cigg
+flamegraph.svg
+perf.data
+perf.data.old
+test.py

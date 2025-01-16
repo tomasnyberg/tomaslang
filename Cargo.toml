@@ -7,6 +7,9 @@ edition = "2021"
 signal-hook = "0.3.17"
 termios = "0.3.3"
 
+[profile.release]
+debug = true
+
 [features]
 debug_trace_execution = []
 debug_disassemble = []
