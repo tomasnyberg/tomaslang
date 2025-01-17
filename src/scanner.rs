@@ -26,7 +26,7 @@ pub enum TokenType {
     EqualEqual,
     Greater,
     GreaterEqual,
-    LambdaArrow,
+    BigRightArrow,
     Less,
     LessEqual,
     SlashDown,
@@ -310,7 +310,7 @@ impl Scanner {
                 }
                 '>' => {
                     self.advance();
-                    Token::new(TokenType::LambdaArrow, String::from("=>"), self.line)
+                    Token::new(TokenType::BigRightArrow, String::from("=>"), self.line)
                 }
                 _ => Token::new(TokenType::Equal, String::from("="), self.line),
             },
@@ -646,7 +646,7 @@ mod tests {
     fn parses_lambda_arrow() {
         let input = "=>";
         let tokens = super::scan(input);
-        let expected = vec![TokenType::LambdaArrow, TokenType::Eof];
+        let expected = vec![TokenType::BigRightArrow, TokenType::Eof];
         verify_output(tokens, expected);
     }
 }

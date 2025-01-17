@@ -243,6 +243,7 @@ impl Compiler {
         rule(RightBrace,   None,                  None,               Precedence::None);
         rule(LeftBracket,  Some(Self::array),     Some(Self::access), Precedence::Call);
         rule(RightBracket, None,                  None,               Precedence::None);
+        rule(BigRightArrow,None,                  None,               Precedence::None);
         rule(Comma,        None,                  None,               Precedence::None);
         rule(Colon,        None,                  Some(Self::append), Precedence::Term);
         rule(Dot,          None,                  None,               Precedence::None);
@@ -817,7 +818,7 @@ impl Compiler {
 
     fn grouping(&mut self) {
         if self.peek(-1).token_type == TokenType::Comma
-            || self.peek(-2).token_type == TokenType::LambdaArrow
+            || self.peek(-2).token_type == TokenType::BigRightArrow
             || self.peek(0).token_type == TokenType::RightParen
         {
             self.lambda_function();
@@ -874,7 +875,7 @@ impl Compiler {
         let arity = self.parse_function_params();
         self.compiling_funcs.last_mut().unwrap().arity = arity;
         self.consume(
-            TokenType::LambdaArrow,
+            TokenType::BigRightArrow,
             "Expected '=>' after lambda parameters",
         );
         if self.match_(TokenType::LeftBrace) {
