@@ -27,6 +27,7 @@ For an overview of all implemented and planned features, see [features.md](https
 ### Sieve of Erastothenes
 ```cigg
 fn sieve(n) {
+    // Nested functions!
     fn expand(prime, p, nc) {
         let i = p * p;
         while i < nc + 1 {
@@ -34,6 +35,7 @@ fn sieve(n) {
             i += p;
         }
     }
+    // Python-like list generation!
     let prime = [true]*(n + 1);
     let p = 2;
     while p * p <= n {
@@ -43,10 +45,14 @@ fn sieve(n) {
       p+=1;
     }
     let result = [];
-    for i in 1..n {
+    // Lambdas!
+    let addprime = (prime, i, result) => {
       if prime[i] {
-        result : i;
+        result : i; // Least confusing append operator (mutating)
       }
+    };
+    for i in 1..n {
+      addprime(prime, i, result);
     }
     return result;
 }

@@ -26,6 +26,7 @@ pub enum TokenType {
     EqualEqual,
     Greater,
     GreaterEqual,
+    LambdaArrow,
     Less,
     LessEqual,
     SlashDown,
@@ -302,7 +303,17 @@ impl Scanner {
             }
             '.' => self.special_second(c, TokenType::Dot, '.', TokenType::DotDot),
             '!' => self.special_second(c, TokenType::Bang, '=', TokenType::BangEqual),
-            '=' => self.special_second(c, TokenType::Equal, '=', TokenType::EqualEqual),
+            '=' => match self.peek() {
+                '=' => {
+                    self.advance();
+                    Token::new(TokenType::EqualEqual, String::from("=="), self.line)
+                }
+                '>' => {
+                    self.advance();
+                    Token::new(TokenType::LambdaArrow, String::from("=>"), self.line)
+                }
+                _ => Token::new(TokenType::Equal, String::from("="), self.line),
+            },
             '<' => self.special_second(c, TokenType::Less, '=', TokenType::LessEqual),
             '>' => self.special_second(c, TokenType::Greater, '=', TokenType::GreaterEqual),
             '\'' | '"' => self.string(c),
@@ -628,6 +639,14 @@ mod tests {
             TokenType::ColonEqual,
             TokenType::Eof,
         ];
+        verify_output(tokens, expected);
+    }
+
+    #[test]
+    fn parses_lambda_arrow() {
+        let input = "=>";
+        let tokens = super::scan(input);
+        let expected = vec![TokenType::LambdaArrow, TokenType::Eof];
         verify_output(tokens, expected);
     }
 }

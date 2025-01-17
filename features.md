@@ -21,7 +21,7 @@
 - [X] constant variables
 - [X] break / continue
 - [X] Nested functions
-- [ ] Lambdas (preferably JavaSript-like ones)
+- [X] Lambdas (preferably JavaSript-like ones)
 - [ ] Ternary
 - [ ] Rust-like match
 - [ ] Multiline strings

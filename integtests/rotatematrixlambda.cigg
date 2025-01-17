@@ -1,0 +1,22 @@
+// EXPECT [[3, 6, 9], [2, 5, 8], [1, 4, 7]]
+fn rotate(mat) {
+    let n = 3;
+    let m = 3;
+    let end = n /_ 2;
+    let swaps = (mat, x, y, n) => {
+        let temp = mat[x][y];
+        mat[x][y] = mat[y][n-1-x];
+        mat[y][n-1-x] = mat[n-1-x][n-1-y];
+        mat[n-1-x][n-1-y] = mat[n-1-y][x];
+        mat[n-1-y][x] = temp;
+    };
+    for x in 0..end {
+        let end2 = n - x - 1;
+        for y in x..end2 {
+            swaps(mat, x, y, n);
+        }
+    }
+}
+let matrix = [[1..4], [4..7], [7..10]];
+rotate(matrix);
+print matrix;

@@ -612,7 +612,7 @@ impl Compiler {
             "Expected 'print' to start print statement",
         );
         self.expression();
-        self.consume(TokenType::Semicolon, "Expected ';' after value");
+        self.consume(TokenType::Semicolon, "Expected ';' after value for print");
         self.emit_byte(OpCode::Print as u8, true);
     }
 
@@ -814,6 +814,13 @@ impl Compiler {
     }
 
     fn grouping(&mut self) {
+        if self.peek(-1).token_type == TokenType::Comma
+            || self.peek(-2).token_type == TokenType::LambdaArrow
+            || self.peek(0).token_type == TokenType::RightParen
+        {
+            self.lambda_function();
+            return;
+        }
         self.expression();
         self.consume(TokenType::RightParen, "Expected ')' after expression");
     }
@@ -856,9 +863,49 @@ impl Compiler {
         );
     }
 
-    fn function_declaration(&mut self) {
-        self.consume(TokenType::Identifier, "Expected function name");
-        let name = self.peek(1).clone();
+    fn lambda_function(&mut self) {
+        self.emit_function(
+            &Token::new(TokenType::Identifier, "lambda".to_string(), 0),
+            true,
+        );
+        self.begin_scope();
+        let arity = self.parse_function_params();
+        self.compiling_funcs.last_mut().unwrap().arity = arity;
+        self.consume(
+            TokenType::LambdaArrow,
+            "Expected '=>' after lambda parameters",
+        );
+        if self.match_(TokenType::LeftBrace) {
+            self.block();
+            self.emit_bytes(OpCode::Null as u8, OpCode::Return as u8);
+        } else {
+            self.expression();
+            self.emit_byte(OpCode::Return as u8, true);
+        }
+        self.end_scope(true);
+        self.compiled_funcs
+            .push(self.compiling_funcs.pop().unwrap());
+    }
+
+    fn parse_function_params(&mut self) -> u8 {
+        let mut arity = 0;
+        if !self.check(TokenType::RightParen) {
+            while !self.check(TokenType::RightParen) {
+                self.implicit_local_var("parameter name");
+                arity += 1;
+                if !self.match_(TokenType::Comma) {
+                    break;
+                }
+            }
+        }
+        self.consume(
+            TokenType::RightParen,
+            "Expected ')' after function arguments",
+        );
+        arity
+    }
+
+    fn emit_function(&mut self, name: &Token, is_lambda: bool) {
         let start = active_chunk!(self).code.len();
         let mut new_func = Function {
             start,
@@ -870,13 +917,16 @@ impl Compiler {
         };
         let const_idx = self.emit_constant(Value::Function(new_func.clone()));
         new_func.const_idx = const_idx as usize;
-        // This function becomes a local variable in the surrounding function scope
         let prev_locals = &mut self.compiling_funcs.last_mut().unwrap().locals;
-        prev_locals.push(Local {
-            name,
-            depth: self.scope_depth as i32, // Is this correct?
-            constant: false,
-        });
+        // This function becomes a local variable in the surrounding function scope
+        // (Unless it's a lambda)
+        if !is_lambda {
+            prev_locals.push(Local {
+                name: name.clone(),
+                depth: self.scope_depth as i32,
+                constant: false,
+            });
+        }
         // A function wants to be able to access itself as well
         new_func.locals.push(Local {
             name: new_func.name.clone(),
@@ -884,23 +934,17 @@ impl Compiler {
             constant: true,
         });
         self.compiling_funcs.push(new_func);
+    }
+
+    fn function_declaration(&mut self) {
+        self.consume(TokenType::Identifier, "Expected function name");
+        let name = self.peek(1).clone();
+        self.emit_function(&name, false);
         self.begin_scope();
         self.consume(TokenType::LeftParen, "Expected '(' after function name");
-        if !self.check(TokenType::RightParen) {
-            let mut arity = 0;
-            while !self.check(TokenType::RightParen) {
-                self.implicit_local_var("parameter name");
-                arity += 1;
-                if !self.match_(TokenType::Comma) {
-                    break;
-                }
-            }
-            self.compiling_funcs.last_mut().unwrap().arity = arity;
-        }
-        self.consume(
-            TokenType::RightParen,
-            "Expected ')' after function arguments",
-        );
+        let arity = self.parse_function_params();
+        self.compiling_funcs.last_mut().unwrap().arity = arity;
+
         self.consume(TokenType::LeftBrace, "Expected '{' before function body");
         self.block();
         self.end_scope(true);
@@ -1477,5 +1521,17 @@ mod tests {
         ];
         chunk.disassemble("test");
         match_bytecode(&chunk, &expected);
+    }
+
+    #[test]
+    fn can_compile_both_expression_and_block_lambdas() {
+        compile_to_chunk("let a = () => 1; let b = (x) => x * 5;");
+        compile_to_chunk("let a = () => {print 1;}; let b = (x) => {print x;};");
+    }
+
+    #[test]
+    fn no_weird_statement_lambdas() {
+        let compiled = compile("let a = () => print 1;");
+        assert_eq!(compiled, CompilerResult::CompileError);
     }
 }

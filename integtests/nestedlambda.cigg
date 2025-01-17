@@ -1,0 +1,5 @@
+// EXPECT 6
+let lam1 = (x) => x + 1;
+let lam2 = (lam, y) => lam(y);
+
+print lam2(lam1, 5);
