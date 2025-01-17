@@ -450,6 +450,10 @@ impl VM {
                     }
                     self.push(Value::Null);
                 }
+                OpCode::Duplicate => {
+                    let value = self.peek(0).clone();
+                    self.push(value);
+                }
                 OpCode::DefineGlobal => {
                     let name = self.global_identifier();
                     let value = self.pop();
