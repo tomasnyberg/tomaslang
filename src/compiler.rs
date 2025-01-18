@@ -344,6 +344,12 @@ impl Compiler {
         );
     }
 
+    fn emit_exception(&mut self, message: &str) {
+        let string = Value::String(Rc::new(RefCell::new(message.chars().collect())));
+        self.emit_constant(string);
+        self.emit_byte(OpCode::RaiseError as u8, true);
+    }
+
     fn match_(&mut self, token_type: TokenType) -> bool {
         if self.peek(0).token_type == token_type {
             self.advance();
@@ -719,7 +725,7 @@ impl Compiler {
             return;
         }
         self.patch_jump(to_next_case);
-        // TODO: runtime error on no match (somehow)?
+        self.emit_exception("No match in match statement");
         for jump in to_end_jumps {
             self.patch_jump(jump);
         }

@@ -1,0 +1,6 @@
+// EXPECT ERR Error: No match in match statement at [line 6] in script\nRuntime error
+let x = 5;
+match x {
+    6 => 10;
+    8 => 11;
+};
