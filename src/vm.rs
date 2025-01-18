@@ -27,13 +27,6 @@ impl Value {
         }
     }
 
-    pub fn as_function(&self) -> &Function {
-        match self {
-            Value::Function(f) => f,
-            _ => panic!("Expected function"),
-        }
-    }
-
     pub fn as_string(&self) -> String {
         match self {
             Value::Number(n) => n.to_string(),
@@ -518,7 +511,7 @@ impl VM {
                     let arg_c = self.pop().as_number() as usize;
                     let called = self.peek(arg_c);
                     let called_fn = match called {
-                        Value::Function(_) => called.as_function(),
+                        Value::Function(f) => f,
                         _ => {
                             self.runtime_error("Can only call functions");
                             return VmResult::RuntimeError;
