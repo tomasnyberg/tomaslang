@@ -18,6 +18,7 @@ pub enum TokenType {
     Plus,
     Semicolon,
     Slash,
+    Underscore,
 
     Star,
     Bang,
@@ -65,6 +66,7 @@ pub enum TokenType {
     Let,
     Const,
     While,
+    Match,
 
     Error,
     Eof,
@@ -221,6 +223,7 @@ impl Scanner {
             "continue" => Token::new(TokenType::Continue, lexeme, self.line),
             "break" => Token::new(TokenType::Break, lexeme, self.line),
             "while" => Token::new(TokenType::While, lexeme, self.line),
+            "match" => Token::new(TokenType::Match, lexeme, self.line),
             _ => Token::new(TokenType::Identifier, lexeme, self.line),
         }
     }
@@ -290,6 +293,12 @@ impl Scanner {
             ';' => Token::new(TokenType::Semicolon, String::from(";"), self.line),
             '*' => self.special_second(c, TokenType::Star, '=', TokenType::StarEqual),
             '%' => self.special_second(c, TokenType::Percent, '=', TokenType::PercentEqual),
+            '_' => {
+                if self.peek().is_ascii_alphabetic() {
+                    return self.identifier();
+                }
+                Token::new(TokenType::Underscore, String::from("_"), self.line)
+            }
             '/' => {
                 if self.peek() == '_' {
                     self.advance();
@@ -647,6 +656,29 @@ mod tests {
         let input = "=>";
         let tokens = super::scan(input);
         let expected = vec![TokenType::BigRightArrow, TokenType::Eof];
+        verify_output(tokens, expected);
+    }
+
+    #[test]
+    fn parses_match_keywords() {
+        let input = "match _";
+        let tokens = super::scan(input);
+        let expected = vec![TokenType::Match, TokenType::Underscore, TokenType::Eof];
+        verify_output(tokens, expected);
+    }
+
+    #[test]
+    fn underscore_ídentifiers() {
+        let input = "_ _a _1 _a1";
+        let tokens = super::scan(input);
+        let expected = vec![
+            TokenType::Underscore,
+            TokenType::Identifier,
+            TokenType::Underscore,
+            TokenType::Number,
+            TokenType::Identifier,
+            TokenType::Eof,
+        ];
         verify_output(tokens, expected);
     }
 }

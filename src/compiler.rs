@@ -268,7 +268,7 @@ impl Compiler {
         rule(String,       Some(Self::string),    None,               Precedence::None);
         rule(Number,       Some(Self::number),    None,               Precedence::None);
         rule(And,          None,                  Some(Self::and),    Precedence::And);
-        rule(Class,        None,                  None,               Precedence::None);
+        rule(Match,        Some(Self::match_expr),None,               Precedence::None);
         rule(Else,         None,                  None,               Precedence::None);
         rule(False,        Some(Self::literal),   None,               Precedence::None);
         rule(Fn,           None,                  None,               Precedence::None);
@@ -667,6 +667,60 @@ impl Compiler {
         self.expression();
         self.consume(TokenType::Semicolon, "Expected ';' after return value");
         self.emit_byte(OpCode::Return as u8, true);
+    }
+
+    fn match_expr(&mut self) {
+        self.expression();
+        self.consume(TokenType::LeftBrace, "Expected '{' after match expression");
+
+        let mut to_next_case: usize = usize::MAX;
+        let mut seen_default = false;
+        let mut to_end_jumps: Vec<usize> = Vec::new();
+        while !self.match_(TokenType::RightBrace) {
+            if self.match_(TokenType::Eof) {
+                self.error_at_current("Expected '}' to end match statement");
+                return;
+            }
+            if seen_default {
+                self.error_at_current("Cannot have cases after default case");
+                return;
+            }
+            if to_next_case != usize::MAX {
+                self.patch_jump(to_next_case);
+                self.emit_byte(OpCode::Pop as u8, true);
+            }
+            // Default, always jump
+            if self.match_(TokenType::Underscore) {
+                seen_default = true;
+                self.emit_byte(OpCode::True as u8, true);
+            } else if self.peek(-1).token_type == TokenType::BigRightArrow {
+                self.emit_byte(OpCode::Duplicate as u8, true);
+                self.expression();
+                self.emit_byte(OpCode::Equal as u8, true);
+            } else {
+                self.error_at_current(
+                    "Match case should be either 'default' or a simple expression",
+                );
+            }
+            to_next_case = self.emit_jump(OpCode::JumpIfFalse);
+            self.emit_byte(OpCode::Pop as u8, true);
+            self.consume(TokenType::BigRightArrow, "Expected '=>' after match case");
+            // Pop the matched expression
+            self.emit_byte(OpCode::Pop as u8, true);
+            // TODO: braces
+            self.expression();
+            self.consume(TokenType::Semicolon, "Expected ';' after match case");
+            to_end_jumps.push(self.emit_jump(OpCode::Jump));
+        }
+        if to_next_case == usize::MAX {
+            self.error_at_current("Match statement with no cases");
+            return;
+        }
+        self.patch_jump(to_next_case);
+        // TODO: runtime error on no match (somehow)?
+        for jump in to_end_jumps {
+            self.patch_jump(jump);
+        }
     }
 
     fn patch_loop_exit_jumps(&mut self) {
@@ -1535,6 +1589,18 @@ mod tests {
     #[test]
     fn no_weird_statement_lambdas() {
         let compiled = compile("let a = () => print 1;");
+        assert_eq!(compiled, CompilerResult::CompileError);
+    }
+
+    #[test]
+    fn basic_match() {
+        let compiled = compile("match 1 { 2 => 3; };");
+        assert_ne!(compiled, CompilerResult::CompileError);
+    }
+
+    #[test]
+    fn no_dumb_matches() {
+        let compiled = compile("match 1 { x+5 => 10;};");
         assert_eq!(compiled, CompilerResult::CompileError);
     }
 }

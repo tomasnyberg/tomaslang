@@ -1,0 +1,7 @@
+// EXPECT ERR [line 5] Error at ';': Match statement with no cases\nCompile error
+let x = 10;
+let y = match x {
+
+};
+
+print y;

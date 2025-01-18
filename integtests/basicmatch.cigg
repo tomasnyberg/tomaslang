@@ -1,0 +1,18 @@
+// EXPECT 11\n17\n462
+let x = match 5 {
+  6 => 10;
+  5 => 11;
+};
+
+print x;
+
+let y = match x {
+    10 => 12;
+    _ => 17;
+};
+print y;
+
+let z = match y {
+    17 => 42*x;
+};
+print z;

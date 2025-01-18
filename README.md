@@ -24,6 +24,19 @@ For an overview of all implemented and planned features, see [features.md](https
 
 ## Examples
 
+### Fibonacci
+```cigg
+fn fib(n) {
+  // Match statements!
+  return match n {
+    0 => 0;
+    1 => 1;
+    _ => fib(n - 1) + fib(n - 2);
+  };
+}
+fib(10);
+```
+
 ### Sieve of Erastothenes
 ```cigg
 fn sieve(n) {

@@ -1,0 +1,5 @@
+// EXPECT ERR [line 4] Error at '5': Cannot have cases after default case\nCompile error
+print match 5 {
+    _ => 10;
+    5 => 12;
+}
