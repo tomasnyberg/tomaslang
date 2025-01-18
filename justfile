@@ -21,12 +21,15 @@ run:
 run-release:
   cargo run --release
 
+# Interpret a file (with debug info)
 runfile filename:
   cargo run --features debug_trace_execution,debug_disassemble -- {{filename}}
 
+# Interpret a file (no debug info)
 runfile-release filename:
   cargo run --release -- {{filename}}
 
+# Build the release binary (put it in /usr/bin/cigg (!))
 build-cigg:
   cargo build --release
   sudo cp ./target/release/tomaslang /usr/bin/cigg
