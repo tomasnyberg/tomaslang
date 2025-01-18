@@ -701,6 +701,8 @@ impl Compiler {
             if self.match_(TokenType::Underscore) {
                 seen_default = true;
                 self.emit_byte(OpCode::True as u8, true);
+            // Compare with == (duplicate since equal consumes the op)
+            // TODO PERF: comparison ops that don't pop everything?
             } else if self.peek(-1).token_type == TokenType::BigRightArrow {
                 self.emit_byte(OpCode::Duplicate as u8, true);
                 self.expression();
@@ -711,12 +713,18 @@ impl Compiler {
                 );
             }
             to_next_case = self.emit_jump(OpCode::JumpIfFalse);
-            self.emit_byte(OpCode::Pop as u8, true);
+            self.emit_byte(OpCode::Pop as u8, true); // Pop the condition (true)
             self.consume(TokenType::BigRightArrow, "Expected '=>' after match case");
             // Pop the matched expression
             self.emit_byte(OpCode::Pop as u8, true);
-            // TODO: braces
-            self.expression();
+            if self.match_(TokenType::LeftBrace) {
+                self.block();
+                // Blocks have no value so make them return null (kind of arbitrary?)
+                // TODO: make it possible to return values from blocks?
+                self.emit_byte(OpCode::Null as u8, true);
+            } else {
+                self.expression();
+            }
             self.consume(TokenType::Semicolon, "Expected ';' after match case");
             to_end_jumps.push(self.emit_jump(OpCode::Jump));
         }
