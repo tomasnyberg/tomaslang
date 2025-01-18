@@ -540,6 +540,11 @@ impl VM {
                 OpCode::Null => self.push(Value::Null),
                 OpCode::True => self.push(Value::Bool(true)),
                 OpCode::False => self.push(Value::Bool(false)),
+                OpCode::RaiseError => {
+                    let message = self.pop();
+                    self.runtime_error(&format!("Error: {}", message));
+                    return VmResult::RuntimeError;
+                }
                 OpCode::Return => {
                     let returned_value = self.pop();
                     let frame_start = self.frame_starts.pop().unwrap();
