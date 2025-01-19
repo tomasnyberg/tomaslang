@@ -17,7 +17,7 @@ To that end, I aim to support as many of my favorite features from other languag
 - [ ] Haskell-like list transformations, e.g. `map (+5) [1,2,3,4,5]`
 - [ ] Python-like list comprehensions, e.g. `[x*5 for x in xs]`
 - [ ] Python-like memoization (`@lru_cache`)
-- [ ] Rust-like match statements
+- [X] Rust-like match statements
 
 For an overview of all implemented and planned features, see [features.md](https://github.com/tomasnyberg/tomaslang/blob/main/features.md).
 
