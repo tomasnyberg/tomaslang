@@ -187,7 +187,7 @@ impl Scanner {
     }
 
     pub fn identifier(&mut self) -> Token {
-        while self.peek().is_ascii_alphanumeric() {
+        while self.peek().is_ascii_alphanumeric() || self.peek() == '_' {
             self.advance();
         }
         let lexeme: String = self.source[self.start..self.current].iter().collect();
@@ -676,6 +676,20 @@ mod tests {
             TokenType::Identifier,
             TokenType::Underscore,
             TokenType::Number,
+            TokenType::Identifier,
+            TokenType::Eof,
+        ];
+        verify_output(tokens, expected);
+    }
+
+    #[test]
+    fn underscore_in_middle_identifiers() {
+        let input = "a_b a_1 a_b1 two_sum";
+        let tokens = super::scan(input);
+        let expected = vec![
+            TokenType::Identifier,
+            TokenType::Identifier,
+            TokenType::Identifier,
             TokenType::Identifier,
             TokenType::Eof,
         ];
