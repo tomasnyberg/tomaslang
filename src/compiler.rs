@@ -109,6 +109,7 @@ pub enum OpCode {
     SetGlobal,
     GetLocal,
     SetLocal,
+    In,
     JumpIfFalse,
     JumpIfTrue,
     JumpIfNull,
@@ -202,24 +203,25 @@ impl OpCode {
             19 => OpCode::SetGlobal,
             20 => OpCode::GetLocal,
             21 => OpCode::SetLocal,
-            22 => OpCode::JumpIfFalse,
-            23 => OpCode::JumpIfTrue,
-            24 => OpCode::JumpIfNull,
-            25 => OpCode::Jump,
-            26 => OpCode::Loop,
-            27 => OpCode::Call,
-            28 => OpCode::Negate,
-            29 => OpCode::Not,
-            30 => OpCode::Next,
-            31 => OpCode::Pop,
-            32 => OpCode::Print,
-            33 => OpCode::Range,
-            34 => OpCode::RaiseError,
-            35 => OpCode::Null,
-            36 => OpCode::True,
-            37 => OpCode::False,
-            38 => OpCode::Return,
-            39 => OpCode::Eof,
+            22 => OpCode::In,
+            23 => OpCode::JumpIfFalse,
+            24 => OpCode::JumpIfTrue,
+            25 => OpCode::JumpIfNull,
+            26 => OpCode::Jump,
+            27 => OpCode::Loop,
+            28 => OpCode::Call,
+            29 => OpCode::Negate,
+            30 => OpCode::Not,
+            31 => OpCode::Next,
+            32 => OpCode::Pop,
+            33 => OpCode::Print,
+            34 => OpCode::Range,
+            35 => OpCode::RaiseError,
+            36 => OpCode::Null,
+            37 => OpCode::True,
+            38 => OpCode::False,
+            39 => OpCode::Return,
+            40 => OpCode::Eof,
             _ => panic!("unexpected opcode (did you update this match after adding an op?)"),
         }
     }
@@ -279,6 +281,7 @@ impl Compiler {
         rule(Fn,           None,                  None,               Precedence::None);
         rule(For,          None,                  None,               Precedence::None);
         rule(If,           None,                  None,               Precedence::None);
+        rule(In,           None,                  Some(Self::in_op),  Precedence::Comparison);
         rule(Null,         Some(Self::literal),   None,               Precedence::None);
         rule(Or,           None,                  Some(Self::or),     Precedence::Or);
         rule(Print,        None,                  None,               Precedence::None);
@@ -1082,6 +1085,11 @@ impl Compiler {
         self.emit_byte(OpCode::Access as u8, true);
     }
 
+    fn in_op(&mut self) {
+        self.expression();
+        self.emit_byte(OpCode::In as u8, true);
+    }
+
     fn valid_local(&mut self, name: &Token) -> bool {
         let duplicate_exists: bool =
             self.compiling_funcs
@@ -1668,5 +1676,27 @@ mod tests {
     fn parses_mixed_hm_and_set() {
         let compiled = compile("let x = {1, 2, 3, 4: 5};");
         assert_ne!(compiled, CompilerResult::CompileError);
+    }
+
+    #[test]
+    fn compiles_in_op_correctly() {
+        let chunk: Chunk = compile_to_chunk("1 in [1, 2, 3];");
+        let expected = [
+            OpCode::Constant as u8,
+            0,
+            OpCode::Constant as u8,
+            1,
+            OpCode::Constant as u8,
+            2,
+            OpCode::Constant as u8,
+            3,
+            OpCode::Array as u8,
+            3,
+            OpCode::In as u8,
+            OpCode::Pop as u8,
+            OpCode::Eof as u8,
+        ];
+        chunk.disassemble("test");
+        match_bytecode(&chunk, &expected);
     }
 }

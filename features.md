@@ -15,7 +15,7 @@
 - [X] functions (with return values and params)
 - [X] Arrays
 - [X] Hashmaps / Sets
-- [ ] Python-like 'in' operator (arrays, strings, hashmaps)
+- [X] Python-like 'in' operator (arrays, strings, hashmaps)
 - [ ] I/O with outside world, e.g. read file/stdin
 
 ## Don't want to live without it

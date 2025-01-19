@@ -80,6 +80,7 @@ impl Chunk {
             OpCode::SetGlobal => self.constant_instruction("SET_GLOBAL_OP", offset),
             OpCode::GetLocal => self.byte_instruction("GET_LOCAL_OP", offset),
             OpCode::SetLocal => self.byte_instruction("SET_LOCAL_OP", offset),
+            OpCode::In => self.simple_instruction("IN_OP", offset),
             OpCode::JumpIfFalse => self.jump_instruction("JUMP_IF_FALSE_OP", 1, offset),
             OpCode::JumpIfTrue => self.jump_instruction("JUMP_IF_TRUE_OP", 1, offset),
             OpCode::JumpIfNull => self.jump_instruction("JUMP_IF_NULL_OP", 1, offset),

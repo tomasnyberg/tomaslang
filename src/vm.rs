@@ -592,6 +592,28 @@ impl VM {
                     let value = self.peek(0).clone();
                     self.stack[idx] = value;
                 }
+                OpCode::In => {
+                    let target = self.pop();
+                    let key = self.pop();
+                    let result = match target {
+                        Value::Array(a) => {
+                            let a = a.borrow();
+                            a.iter().any(|x| x == &key)
+                        }
+                        Value::String(_) => {
+                            todo!();
+                        }
+                        Value::HashMap(m) => {
+                            let m = m.borrow();
+                            m.0.contains_key(&key)
+                        }
+                        _ => {
+                            self.runtime_error("Expected array, string or hashmap to in op");
+                            return VmResult::RuntimeError;
+                        }
+                    };
+                    self.push(Value::Bool(result));
+                }
                 OpCode::JumpIfFalse => {
                     let offset = self.read_short() as usize;
                     if !self.is_truthy(self.peek(0)) {

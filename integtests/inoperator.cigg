@@ -1,0 +1,11 @@
+// EXPECT true\n2 is in xs\nfalse\ntrue\nfalse
+let xs = [1,2,3];
+print 1 in xs;
+if 2 in xs {
+  print "2 is in xs";
+}
+print 4 in xs;
+
+let hm = {1: 5};
+print 1 in hm;
+print "a" in hm;
