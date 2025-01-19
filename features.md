@@ -15,6 +15,7 @@
 - [X] functions (with return values and params)
 - [X] Arrays
 - [X] Hashmaps / Sets
+- [ ] Python-like 'in' operator (arrays, strings, hashmaps)
 - [ ] I/O with outside world, e.g. read file/stdin
 
 ## Don't want to live without it
@@ -23,7 +24,7 @@
 - [X] Nested functions
 - [X] Lambdas (preferably JavaSript-like ones)
 - [ ] Ternary
-- [ ] Rust-like match
+- [X] Rust-like match
 - [ ] Multiline strings
 
 ## Syntax sugar
