@@ -2,7 +2,7 @@
 let arr = [];
 for i in 1..10000 {
   let y = i /_ 2 * 57 + 10;
-  arr : i*52*y;
+  arr :: i*52*y;
 }
 print arr[5825];
 

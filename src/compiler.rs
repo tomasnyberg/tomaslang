@@ -247,7 +247,8 @@ impl Compiler {
         rule(RightBracket, None,                  None,               Precedence::None);
         rule(BigRightArrow,None,                  None,               Precedence::None);
         rule(Comma,        None,                  None,               Precedence::None);
-        rule(Colon,        None,                  Some(Self::append), Precedence::Term);
+        rule(Colon,        None,                  None,               Precedence::None);
+        rule(ColonColon,   None,                  Some(Self::append), Precedence::Term);
         rule(Dot,          None,                  None,               Precedence::None);
         // Is precedence correct here? Not sure.
         rule(DotDot,       None,                  Some(Self::range),  Precedence::Term);

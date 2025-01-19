@@ -12,6 +12,7 @@ pub enum TokenType {
     RightBrace,
     Comma,
     Colon,
+    ColonColon,
     Dot,
     DotDot,
     Minus,
@@ -39,7 +40,6 @@ pub enum TokenType {
     SlashEqual,
     SlashDownEqual,
     PercentEqual,
-    ColonEqual,
 
     Identifier,
     String,
@@ -289,7 +289,7 @@ impl Scanner {
             ',' => Token::new(TokenType::Comma, String::from(","), self.line),
             '-' => self.special_second(c, TokenType::Minus, '=', TokenType::MinusEqual),
             '+' => self.special_second(c, TokenType::Plus, '=', TokenType::PlusEqual),
-            ':' => self.special_second(c, TokenType::Colon, '=', TokenType::ColonEqual),
+            ':' => self.special_second(c, TokenType::Colon, ':', TokenType::ColonColon),
             ';' => Token::new(TokenType::Semicolon, String::from(";"), self.line),
             '*' => self.special_second(c, TokenType::Star, '=', TokenType::StarEqual),
             '%' => self.special_second(c, TokenType::Percent, '=', TokenType::PercentEqual),
@@ -636,7 +636,7 @@ mod tests {
 
     #[test]
     fn parses_binary_assigners() {
-        let input = "+= -= *= /= /_= %= :=";
+        let input = "+= -= *= /= /_= %= ::";
         let tokens = super::scan(input);
         let expected = vec![
             TokenType::PlusEqual,
@@ -645,7 +645,7 @@ mod tests {
             TokenType::SlashEqual,
             TokenType::SlashDownEqual,
             TokenType::PercentEqual,
-            TokenType::ColonEqual,
+            TokenType::ColonColon,
             TokenType::Eof,
         ];
         verify_output(tokens, expected);

@@ -61,7 +61,7 @@ fn sieve(n) {
     // Lambdas!
     let addprime = (prime, i, result) => {
       if prime[i] {
-        result : i; // Least confusing append operator (mutating)
+        result :: i; // Append operator (mutating)
       }
     };
     for i in 1..n {

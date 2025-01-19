@@ -10,7 +10,7 @@ let xs = [];
 for i in 0..3 {
     match i {
         _ => {
-            xs : i;
+            xs :: i;
             print xs;
         };
     };
