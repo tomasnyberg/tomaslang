@@ -103,6 +103,7 @@ pub enum OpCode {
     NotEqual,
     Greater,
     GreaterEqual,
+    HashMap,
     DefineGlobal,
     GetGlobal,
     SetGlobal,
@@ -195,29 +196,30 @@ impl OpCode {
             13 => OpCode::NotEqual,
             14 => OpCode::Greater,
             15 => OpCode::GreaterEqual,
-            16 => OpCode::DefineGlobal,
-            17 => OpCode::GetGlobal,
-            18 => OpCode::SetGlobal,
-            19 => OpCode::GetLocal,
-            20 => OpCode::SetLocal,
-            21 => OpCode::JumpIfFalse,
-            22 => OpCode::JumpIfTrue,
-            23 => OpCode::JumpIfNull,
-            24 => OpCode::Jump,
-            25 => OpCode::Loop,
-            26 => OpCode::Call,
-            27 => OpCode::Negate,
-            28 => OpCode::Not,
-            29 => OpCode::Next,
-            30 => OpCode::Pop,
-            31 => OpCode::Print,
-            32 => OpCode::Range,
-            33 => OpCode::RaiseError,
-            34 => OpCode::Null,
-            35 => OpCode::True,
-            36 => OpCode::False,
-            37 => OpCode::Return,
-            38 => OpCode::Eof,
+            16 => OpCode::HashMap,
+            17 => OpCode::DefineGlobal,
+            18 => OpCode::GetGlobal,
+            19 => OpCode::SetGlobal,
+            20 => OpCode::GetLocal,
+            21 => OpCode::SetLocal,
+            22 => OpCode::JumpIfFalse,
+            23 => OpCode::JumpIfTrue,
+            24 => OpCode::JumpIfNull,
+            25 => OpCode::Jump,
+            26 => OpCode::Loop,
+            27 => OpCode::Call,
+            28 => OpCode::Negate,
+            29 => OpCode::Not,
+            30 => OpCode::Next,
+            31 => OpCode::Pop,
+            32 => OpCode::Print,
+            33 => OpCode::Range,
+            34 => OpCode::RaiseError,
+            35 => OpCode::Null,
+            36 => OpCode::True,
+            37 => OpCode::False,
+            38 => OpCode::Return,
+            39 => OpCode::Eof,
             _ => panic!("unexpected opcode (did you update this match after adding an op?)"),
         }
     }
@@ -241,7 +243,7 @@ impl Compiler {
         use TokenType::*;
         rule(LeftParen,    Some(Self::grouping),  Some(Self::call),   Precedence::Call);
         rule(RightParen,   None,                  None,               Precedence::None);
-        rule(LeftBrace,    None,                  None,               Precedence::None);
+        rule(LeftBrace,    Some(Self::hash_map),  None,               Precedence::None);
         rule(RightBrace,   None,                  None,               Precedence::None);
         rule(LeftBracket,  Some(Self::array),     Some(Self::access), Precedence::Call);
         rule(RightBracket, None,                  None,               Precedence::None);
@@ -897,6 +899,35 @@ impl Compiler {
         }
         self.expression();
         self.consume(TokenType::RightParen, "Expected ')' after expression");
+    }
+
+    fn hash_map(&mut self) {
+        let mut count = 0;
+        while !self.check(TokenType::RightBrace) {
+            self.expression();
+            match self.peek(0).token_type {
+                TokenType::Colon => {
+                    self.advance();
+                    self.expression();
+                }
+                TokenType::Comma => {
+                    self.emit_byte(OpCode::Null as u8, true);
+                }
+                TokenType::RightBrace => {
+                    break;
+                }
+                _ => {
+                    self.error_at_current("Expected ':' or ',' in hashmap");
+                    return;
+                }
+            }
+            count += 1;
+            if !self.match_(TokenType::Comma) {
+                break;
+            }
+        }
+        self.consume(TokenType::RightBrace, "Expected '}' after hashmap");
+        self.emit_bytes(OpCode::HashMap as u8, count);
     }
 
     fn parse_precedence(&mut self, precedence: Precedence) {
@@ -1619,5 +1650,23 @@ mod tests {
     fn no_dumb_matches() {
         let compiled = compile("match 1 { x+5 => 10;};");
         assert_eq!(compiled, CompilerResult::CompileError);
+    }
+
+    #[test]
+    fn parses_hashmap() {
+        let compiled = compile("let x = {1: 2, 3: 4};");
+        assert_ne!(compiled, CompilerResult::CompileError);
+    }
+
+    #[test]
+    fn parses_set() {
+        let compiled = compile("let x = {1, 2, 3};");
+        assert_ne!(compiled, CompilerResult::CompileError);
+    }
+
+    #[test]
+    fn parses_mixed_hm_and_set() {
+        let compiled = compile("let x = {1, 2, 3, 4: 5};");
+        assert_ne!(compiled, CompilerResult::CompileError);
     }
 }

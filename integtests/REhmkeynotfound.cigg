@@ -1,0 +1,3 @@
+// EXPECT ERR Key not found in hashmap: 5 at [line 3] in script\nRuntime error
+let hm = {};
+print hm[5];

@@ -1,0 +1,14 @@
+// EXPECT 10\n[1, 2, 3]\n5\n10
+let hm = {1:10, "a": [1,2,3]};
+print hm[1];
+print hm["a"];
+
+hm[1] = 5;
+print hm[1];
+
+let hm2 = {};
+let xs = [1,2,3];
+let ys = [1,2,3];
+
+hm2[xs] = 10;
+print hm2[ys];

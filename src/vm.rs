@@ -1,6 +1,16 @@
+use std::hash::{Hash, Hasher};
 use std::{cell::RefCell, collections::HashMap, fmt, rc::Rc};
 
 use crate::{chunk::Chunk, compiler::Function, compiler::OpCode, compiler::Range};
+
+#[derive(Debug, Clone, Eq)]
+pub struct CiggHashMap(HashMap<Value, Value>);
+
+impl PartialEq for CiggHashMap {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value {
@@ -11,7 +21,54 @@ pub enum Value {
     Function(Function),
     Range(Range),
     Array(Rc<RefCell<Vec<Value>>>),
+    HashMap(Rc<RefCell<CiggHashMap>>),
     ReturnAddress(usize),
+}
+
+// NOTE: this might not hold up perfectly
+impl Eq for Value {}
+
+impl Hash for Value {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        // Tag each variant (the x_u8 part) distinctly so they do not collide
+        match self {
+            Value::Number(n) => {
+                0_u8.hash(state);
+                n.to_bits().hash(state);
+            }
+            Value::Bool(b) => {
+                1_u8.hash(state);
+                b.hash(state);
+            }
+            Value::Null => {
+                2_u8.hash(state);
+            }
+            Value::String(s) => {
+                3_u8.hash(state);
+                let borrowed = s.borrow();
+                Hash::hash_slice(&borrowed, state);
+            }
+            Value::Array(arr) => {
+                4_u8.hash(state);
+                let borrowed = arr.borrow();
+                for val in &*borrowed {
+                    val.hash(state);
+                }
+            }
+            Value::Function(_) => {
+                unimplemented!()
+            }
+            Value::Range(_) => {
+                unimplemented!()
+            }
+            Value::HashMap(_) => {
+                unimplemented!()
+            }
+            Value::ReturnAddress(_) => {
+                unimplemented!()
+            }
+        }
+    }
 }
 
 #[allow(dead_code)]
@@ -47,6 +104,18 @@ impl Value {
                 result.push(']');
                 result
             }
+            Value::HashMap(m) => {
+                let m = m.borrow();
+                let mut result = String::from("{");
+                for (key, value) in m.0.iter() {
+                    result.push_str(&format!("{}: {}", key.as_string(), value.as_string()));
+                    result.push_str(", ");
+                }
+                result.pop();
+                result.pop();
+                result.push('}');
+                result
+            }
             Value::ReturnAddress(x) => format!("RA {x}"),
         }
     }
@@ -67,11 +136,39 @@ impl Value {
         matches!(self, Value::Array(_))
     }
 
-    pub fn inbounds_check(&self, index: usize) -> bool {
+    pub fn check_index_inbounds<T>(&self, index: &Value, target: &[T]) -> Option<String> {
+        let target_type = match self {
+            Value::Array(_) => "array",
+            Value::String(_) => "string",
+            _ => unreachable!(),
+        };
+        match index {
+            Value::Number(n) => {
+                let index = *n as usize;
+                if index >= target.len() {
+                    return Some(format!("Index {} out of bounds for {}", index, target_type));
+                }
+                None
+            }
+            _ => Some(format!("Expected number, got {}", index)),
+        }
+    }
+
+    pub fn check_valid_access(&self, index: &Value, is_set: bool) -> Option<String> {
         match self {
-            Value::Array(a) => index < a.borrow().len(),
-            Value::String(s) => index < s.borrow().len(),
-            _ => false,
+            Value::Array(a) => self.check_index_inbounds(index, &a.borrow()),
+            Value::String(s) => self.check_index_inbounds(index, &s.borrow()),
+            Value::HashMap(m) => {
+                if is_set {
+                    return None;
+                }
+                let m = m.borrow();
+                if !m.0.contains_key(index) {
+                    return Some(format!("Key not found in hashmap: {}", index));
+                }
+                None
+            }
+            _ => unreachable!(),
         }
     }
 }
@@ -276,6 +373,7 @@ impl VM {
             Value::Function(_) => true,
             Value::Range(_) => true,
             Value::Array(a) => !a.borrow().is_empty(),
+            Value::HashMap(_) => true,
             Value::ReturnAddress(_) => {
                 panic!("Return address should not be possible to evaluate for truth")
             }
@@ -297,13 +395,6 @@ impl VM {
             value_to_set = self.pop();
         }
         let index = self.pop();
-        let index = match index {
-            Value::Number(n) => n as usize,
-            _ => {
-                self.runtime_error("Expected number for index");
-                return;
-            }
-        };
         // If it's a set, the whole thing will be an expression statement
         // and pop at the end. So leave the reference on the stack to
         // account for that one.
@@ -313,33 +404,41 @@ impl VM {
             self.pop()
         };
         let target = match reference {
-            Value::Array(_) | Value::String(_) => reference,
+            Value::Array(_) | Value::String(_) | Value::HashMap(_) => reference,
             _ => {
-                self.runtime_error("Expected array or string");
+                self.runtime_error("Attempt to index non-indexable value");
                 return;
             }
         };
-
-        if !target.inbounds_check(index) {
-            self.runtime_error("Index out of bounds");
+        if let Some(error) = target.check_valid_access(&index, op == OpCode::AccessSet) {
+            self.runtime_error(&error);
             return;
         }
         match op {
             OpCode::Access => {
                 let result = match target {
-                    Value::Array(a) => a.borrow()[index].clone(),
+                    Value::Array(a) => a.borrow()[index.as_number() as usize].clone(),
                     Value::String(s) => {
                         let s = s.borrow();
-                        Value::String(Rc::new(RefCell::new(vec![s[index]])))
+                        let idx = index.as_number() as usize;
+                        Value::String(Rc::new(RefCell::new(vec![s[idx]])))
+                    }
+                    Value::HashMap(m) => {
+                        let m = m.borrow();
+                        m.0.get(&index).unwrap().clone()
                     }
                     _ => unreachable!(),
                 };
                 self.push(result);
             }
             OpCode::AccessSet => match target {
-                Value::Array(a) => a.borrow_mut()[index] = value_to_set,
+                Value::Array(a) => a.borrow_mut()[index.as_number() as usize] = value_to_set,
                 Value::String(_) => {
                     todo!();
+                }
+                Value::HashMap(m) => {
+                    let mut m = m.borrow_mut();
+                    m.0.insert(index, value_to_set);
                 }
                 _ => unreachable!(),
             },
@@ -394,6 +493,18 @@ impl VM {
                     }
                     array.reverse();
                     self.push(Value::Array(Rc::new(RefCell::new(array))));
+                }
+                // I'm not sure Values work perfectly as keys the PartialEq/Eq implementations is
+                // dodgy
+                OpCode::HashMap => {
+                    let count = self.read_byte();
+                    let mut map = HashMap::new();
+                    for _ in 0..count {
+                        let value = self.pop();
+                        let key = self.pop();
+                        map.insert(key, value);
+                    }
+                    self.push(Value::HashMap(Rc::new(RefCell::new(CiggHashMap(map)))));
                 }
                 OpCode::Negate => {
                     let value: Value = self.pop();
@@ -673,6 +784,18 @@ mod tests {
         let result = vm.run();
         assert_eq!(result, VmResult::OK);
         let program = "fn f(a) { print a; } f(5,10);";
+        let mut vm = get_vm(program);
+        let result = vm.run();
+        assert_eq!(result, VmResult::RuntimeError);
+    }
+
+    #[test]
+    fn basic_hm() {
+        let program = "let hm = {1: 2, 3: 4}; print hm[1];";
+        let mut vm = get_vm(program);
+        let result = vm.run();
+        assert_eq!(result, VmResult::OK);
+        let program = "let hm = {1: 2, 3: 4}; print hm[10];";
         let mut vm = get_vm(program);
         let result = vm.run();
         assert_eq!(result, VmResult::RuntimeError);

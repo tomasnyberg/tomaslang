@@ -14,7 +14,7 @@
 - [X] Loops (for, while)
 - [X] functions (with return values and params)
 - [X] Arrays
-- [ ] Hashmaps / Sets
+- [X] Hashmaps / Sets
 - [ ] I/O with outside world, e.g. read file/stdin
 
 ## Don't want to live without it

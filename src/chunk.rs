@@ -74,6 +74,7 @@ impl Chunk {
             OpCode::NotEqual => self.simple_instruction("NOT_EQUAL_OP", offset),
             OpCode::Greater => self.simple_instruction("GREATER_OP", offset),
             OpCode::GreaterEqual => self.simple_instruction("GREATER_EQUAL_OP", offset),
+            OpCode::HashMap => self.byte_instruction("HASHMAP_OP", offset),
             OpCode::DefineGlobal => self.constant_instruction("DEFINE_GLOBAL_OP", offset),
             OpCode::GetGlobal => self.constant_instruction("GET_GLOBAL_OP", offset),
             OpCode::SetGlobal => self.constant_instruction("SET_GLOBAL_OP", offset),
