@@ -37,6 +37,28 @@ fn fib(n) {
 fib(10);
 ```
 
+### Two-sum
+```cigg
+let xs = [];
+for i in 0..100000 {
+  xs :: i;
+}
+
+fn two_sum(xs, target) {
+  let seen = {};
+  for i in 0..100 {
+    let needed = target - xs[i];
+    if needed in seen {
+      return [seen[needed], i];
+    }
+    seen[xs[i]] = i;
+  }
+  return [-1,-1];
+}
+
+print two_sum(xs, xs[38] + xs[158]);
+```
+
 ### Sieve of Erastothenes
 ```cigg
 fn sieve(n) {
