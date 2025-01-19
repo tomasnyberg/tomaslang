@@ -908,6 +908,7 @@ impl Compiler {
         let mut count = 0;
         while !self.check(TokenType::RightBrace) {
             self.expression();
+            count += 1;
             match self.peek(0).token_type {
                 TokenType::Colon => {
                     self.advance();
@@ -917,6 +918,7 @@ impl Compiler {
                     self.emit_byte(OpCode::Null as u8, true);
                 }
                 TokenType::RightBrace => {
+                    self.emit_byte(OpCode::Null as u8, true);
                     break;
                 }
                 _ => {
@@ -924,7 +926,6 @@ impl Compiler {
                     return;
                 }
             }
-            count += 1;
             if !self.match_(TokenType::Comma) {
                 break;
             }
