@@ -1,8 +1,5 @@
 // EXPECT [97, 99]
-let xs = [];
-for i in 0..100000 {
-  xs :: i;
-}
+let xs = [0..100000];
 
 fn two_sum(xs, target) {
   let seen = {};

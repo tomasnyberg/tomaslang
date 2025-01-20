@@ -27,7 +27,7 @@ For an overview of all implemented and planned features, see [features.md](https
 ### Fibonacci
 ```cigg
 fn fib(n) {
-  // Match statements!
+  // Rust-like match statements!
   return match n {
     0 => 0;
     1 => 1;
@@ -39,12 +39,11 @@ fib(10);
 
 ### Two-sum
 ```cigg
-let xs = [];
-for i in 0..100000 {
-  xs :: i;
-}
+// Haskell-like list generation!
+let xs = [0..100000];
 
 fn two_sum(xs, target) {
+  // Python-like hashmaps/sets!
   let seen = {};
   for i in 0..100 {
     let needed = target - xs[i];
