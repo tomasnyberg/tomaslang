@@ -45,7 +45,6 @@ pub enum TokenType {
     String,
     Number,
     And,
-    Class,
     Continue,
     Break,
     Else,
@@ -194,7 +193,6 @@ impl Scanner {
         // TODO PERF: match on only the first couple chars with a match
         match lexeme.as_str() {
             "and" => Token::new(TokenType::And, lexeme, self.line),
-            "class" => Token::new(TokenType::Class, lexeme, self.line),
             "else" => Token::new(TokenType::Else, lexeme, self.line),
             "false" => Token::new(TokenType::False, lexeme, self.line),
             "for" => Token::new(TokenType::For, lexeme, self.line),
@@ -414,12 +412,11 @@ mod tests {
 
     #[test]
     fn parses_keywords() {
-        let input = "and class else false for fn if null or print return super this true let while";
+        let input = "and else false for fn if null or print return super this true let while";
         let tokens = super::scan(input);
 
         let expected = vec![
             TokenType::And,
-            TokenType::Class,
             TokenType::Else,
             TokenType::False,
             TokenType::For,
