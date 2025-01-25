@@ -71,7 +71,6 @@ impl Hash for Value {
     }
 }
 
-#[allow(dead_code)]
 impl Value {
     pub fn as_number(&self) -> f64 {
         match self {

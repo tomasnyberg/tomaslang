@@ -85,7 +85,6 @@ impl Range {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[repr(u8)]
-#[allow(dead_code)]
 pub enum OpCode {
     Constant,
     Access,
