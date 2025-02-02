@@ -19,6 +19,7 @@ pub enum TokenType {
     Semicolon,
     Slash,
     Underscore,
+    QuestionMark,
 
     Star,
     Bang,
@@ -290,6 +291,7 @@ impl Scanner {
             ';' => Token::new(TokenType::Semicolon, String::from(";"), self.line),
             '*' => self.special_second(c, TokenType::Star, '=', TokenType::StarEqual),
             '%' => self.special_second(c, TokenType::Percent, '=', TokenType::PercentEqual),
+            '?' => Token::new(TokenType::QuestionMark, String::from("?"), self.line),
             '_' => {
                 if self.peek().is_ascii_alphabetic() {
                     return self.identifier();
@@ -686,6 +688,21 @@ mod tests {
             TokenType::Identifier,
             TokenType::Identifier,
             TokenType::Identifier,
+            TokenType::Identifier,
+            TokenType::Eof,
+        ];
+        verify_output(tokens, expected);
+    }
+
+    #[test]
+    fn question_mark_ternary_operator() {
+        let input = "? ? a:b";
+        let tokens = super::scan(input);
+        let expected = vec![
+            TokenType::QuestionMark,
+            TokenType::QuestionMark,
+            TokenType::Identifier,
+            TokenType::Colon,
             TokenType::Identifier,
             TokenType::Eof,
         ];

@@ -35,6 +35,10 @@ fn fib(n) {
   };
 }
 fib(10);
+// Or ternaries, if you prefer those :)
+fn tfib(n) {
+  return a < 2 ? 1:fib(a-2) + fib(a-1);
+}
 ```
 
 ### Two-sum

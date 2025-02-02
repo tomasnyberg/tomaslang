@@ -1,0 +1,12 @@
+// EXPECT 89\n120
+
+fn fib(a) {
+  return a < 2 ? 1:fib(a-2) + fib(a-1);
+}
+
+fn fac(n) {
+  return n == 0 ? 1:n*fac(n-1);
+}
+
+print fib(10);
+print fac(5);

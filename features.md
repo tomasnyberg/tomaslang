@@ -23,7 +23,7 @@
 - [X] break / continue
 - [X] Nested functions
 - [X] Lambdas (preferably JavaSript-like ones)
-- [ ] Ternary
+- [X] Ternary
 - [X] Rust-like match
 - [ ] Multiline strings
 

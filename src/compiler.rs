@@ -250,6 +250,7 @@ impl Compiler {
         rule(RightBracket, None,                  None,               Precedence::None);
         rule(BigRightArrow,None,                  None,               Precedence::None);
         rule(Comma,        None,                  None,               Precedence::None);
+        rule(QuestionMark, None,                  Some(Self::ternary),Precedence::Assignment);
         rule(Colon,        None,                  None,               Precedence::None);
         rule(ColonColon,   None,                  Some(Self::append), Precedence::Term);
         rule(Dot,          None,                  None,               Precedence::None);
@@ -459,6 +460,18 @@ impl Compiler {
             TokenType::Bang => self.emit_byte(OpCode::Not as u8, true),
             _ => self.error_at_current("Expected unary operator"),
         }
+    }
+
+    fn ternary(&mut self) {
+        let else_jump = self.emit_jump(OpCode::JumpIfFalse);
+        self.emit_byte(OpCode::Pop as u8, true);
+        self.expression();
+        let end_jump = self.emit_jump(OpCode::Jump);
+        self.patch_jump(else_jump);
+        self.emit_byte(OpCode::Pop as u8, true);
+        self.consume(TokenType::Colon, "Expected ':' after ternary condition");
+        self.expression();
+        self.patch_jump(end_jump);
     }
 
     fn emit_jump(&mut self, jump_type: OpCode) -> usize {
@@ -1693,6 +1706,32 @@ mod tests {
             OpCode::Array as u8,
             3,
             OpCode::In as u8,
+            OpCode::Pop as u8,
+            OpCode::Eof as u8,
+        ];
+        chunk.disassemble("test");
+        match_bytecode(&chunk, &expected);
+    }
+
+    #[test]
+    fn compiles_ternary() {
+        let chunk: Chunk = compile_to_chunk("let x = true; x ? 1 : 2;");
+        let expected = [
+            OpCode::True as u8,
+            OpCode::GetLocal as u8,
+            0,
+            OpCode::JumpIfFalse as u8,
+            0x0,
+            0x6,
+            OpCode::Pop as u8,
+            OpCode::Constant as u8,
+            0,
+            OpCode::Jump as u8,
+            0x0,
+            0x3,
+            OpCode::Pop as u8,
+            OpCode::Constant as u8,
+            1,
             OpCode::Pop as u8,
             OpCode::Eof as u8,
         ];

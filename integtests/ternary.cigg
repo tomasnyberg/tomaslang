@@ -1,0 +1,6 @@
+// EXPECT 10\nyes
+let a = true ? 10:5;
+print a;
+
+let b = a == 10 ? "yes":"no";
+print b;
