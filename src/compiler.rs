@@ -119,7 +119,6 @@ pub enum OpCode {
     Not,
     Next,
     Pop,
-    Print,
     Range,
     RaiseError,
     Null,
@@ -213,14 +212,13 @@ impl OpCode {
             30 => OpCode::Not,
             31 => OpCode::Next,
             32 => OpCode::Pop,
-            33 => OpCode::Print,
-            34 => OpCode::Range,
-            35 => OpCode::RaiseError,
-            36 => OpCode::Null,
-            37 => OpCode::True,
-            38 => OpCode::False,
-            39 => OpCode::Return,
-            40 => OpCode::Eof,
+            33 => OpCode::Range,
+            34 => OpCode::RaiseError,
+            35 => OpCode::Null,
+            36 => OpCode::True,
+            37 => OpCode::False,
+            38 => OpCode::Return,
+            39 => OpCode::Eof,
             _ => panic!("unexpected opcode (did you update this match after adding an op?)"),
         }
     }
@@ -284,7 +282,6 @@ impl Compiler {
         rule(In,           None,                  Some(Self::in_op),  Precedence::Comparison);
         rule(Null,         Some(Self::literal),   None,               Precedence::None);
         rule(Or,           None,                  Some(Self::or),     Precedence::Or);
-        rule(Print,        None,                  None,               Precedence::None);
         rule(Return,       None,                  None,               Precedence::None);
         rule(Super,        None,                  None,               Precedence::None);
         rule(This,         None,                  None,               Precedence::None);
@@ -633,16 +630,6 @@ impl Compiler {
 
     fn expression(&mut self) {
         self.parse_precedence(Precedence::Assignment);
-    }
-
-    fn print_statement(&mut self) {
-        self.consume(
-            TokenType::Print,
-            "Expected 'print' to start print statement",
-        );
-        self.expression();
-        self.consume(TokenType::Semicolon, "Expected ';' after value for print");
-        self.emit_byte(OpCode::Print as u8, true);
     }
 
     fn if_statement(&mut self) {
@@ -1208,7 +1195,6 @@ impl Compiler {
     fn statement(&mut self) {
         let curr_type = self.peek(0).token_type;
         match curr_type {
-            TokenType::Print => self.print_statement(),
             TokenType::For => self.for_statement(),
             TokenType::If => self.if_statement(),
             TokenType::Return => self.return_statement(),
@@ -1245,9 +1231,9 @@ mod tests {
     use crate::compiler::*;
 
     fn match_bytecode(chunk: &Chunk, expected: &[u8]) {
-        assert_eq!(expected.len(), chunk.code.len());
+        assert_eq!(expected.len(), chunk.code.len(), "Length mismatch");
         for (i, byte) in expected.iter().enumerate() {
-            assert_eq!(*byte, chunk.code[i]);
+            assert_eq!(*byte, chunk.code[i], "Byte mismatch at index {}", i);
         }
     }
 
@@ -1387,15 +1373,20 @@ mod tests {
 
     #[test]
     fn using_globals() {
-        let chunk: Chunk = compile_to_chunk("global a = 1; print a;");
+        let chunk: Chunk = compile_to_chunk("global a = 1; print(a);");
         let expected = [
             OpCode::Constant as u8,
             1,
             OpCode::DefineGlobal as u8,
             0, // Points to "a"
             OpCode::GetGlobal as u8,
-            2, // Points to "a"
-            OpCode::Print as u8,
+            2,
+            OpCode::GetGlobal as u8,
+            3,
+            OpCode::Constant as u8,
+            4,
+            OpCode::Call as u8,
+            OpCode::Pop as u8,
             OpCode::Eof as u8,
         ];
         chunk.disassemble("test");
@@ -1404,7 +1395,7 @@ mod tests {
 
     #[test]
     fn setting_globals() {
-        let chunk: Chunk = compile_to_chunk("global a = 1; a = 2; print a;");
+        let chunk: Chunk = compile_to_chunk("global a = 1; a = 2; print(a);");
         let expected = [
             OpCode::Constant as u8,
             1, // Points to 1
@@ -1416,8 +1407,13 @@ mod tests {
             2, // Points to "a"
             OpCode::Pop as u8,
             OpCode::GetGlobal as u8,
-            4, // Points to "a"
-            OpCode::Print as u8,
+            4,
+            OpCode::GetGlobal as u8,
+            5,
+            OpCode::Constant as u8,
+            6,
+            OpCode::Call as u8,
+            OpCode::Pop as u8,
             OpCode::Eof as u8,
         ];
         chunk.disassemble("test");
@@ -1426,16 +1422,21 @@ mod tests {
 
     #[test]
     fn declaring_locals() {
-        let chunk: Chunk = compile_to_chunk("let a = 5; print a;");
+        let chunk: Chunk = compile_to_chunk("let a = 5; print(a);");
         let expected = [
             OpCode::Constant as u8,
             // Points to 5, this is actually the variable a. it just lives here.
             // quote: The temporary (value) simply _becomes_ the local variable.
             // That position on the stack IS the local variable.
             0,
+            OpCode::GetGlobal as u8,
+            1,
             OpCode::GetLocal as u8,
             0, // Points to "a"
-            OpCode::Print as u8,
+            OpCode::Constant as u8,
+            2,
+            OpCode::Call as u8,
+            OpCode::Pop as u8,
             OpCode::Eof as u8,
         ];
         chunk.disassemble("test");
@@ -1444,16 +1445,21 @@ mod tests {
 
     #[test]
     fn redeclaring_local() {
-        let chunk: Chunk = compile_to_chunk("let a = 100; {let a = 10; print a;}");
+        let chunk: Chunk = compile_to_chunk("let a = 100; {let a = 10; print(a);}");
         let expected = [
             OpCode::Constant as u8,
             0, // outer a
             OpCode::Constant as u8,
             1, // Inner a
+            OpCode::GetGlobal as u8,
+            2,
             OpCode::GetLocal as u8,
-            1, // inner a should be printed
-            OpCode::Print as u8,
-            OpCode::Pop as u8, // End the scope
+            1,
+            OpCode::Constant as u8,
+            3,
+            OpCode::Call as u8,
+            OpCode::Pop as u8,
+            OpCode::Pop as u8,
             OpCode::Eof as u8,
         ];
         chunk.disassemble("test");
@@ -1462,13 +1468,18 @@ mod tests {
 
     #[test]
     fn good_constant() {
-        let chunk: Chunk = compile_to_chunk("const a = 100; print a;");
+        let chunk: Chunk = compile_to_chunk("const a = 100; print(a);");
         let expected = [
             OpCode::Constant as u8,
             0, // Points to 100
+            OpCode::GetGlobal as u8,
+            1,
             OpCode::GetLocal as u8,
             0, // Points to "a"
-            OpCode::Print as u8,
+            OpCode::Constant as u8,
+            2,
+            OpCode::Call as u8,
+            OpCode::Pop as u8,
             OpCode::Eof as u8,
         ];
         chunk.disassemble("test");
@@ -1477,7 +1488,7 @@ mod tests {
 
     #[test]
     fn bad_constant() {
-        let compiled = compile("const a; print a;");
+        let compiled = compile("const a; print(a);");
         assert_eq!(compiled, CompilerResult::CompileError);
         let compiled = compile("const a = 100; a = 200;");
         assert_eq!(compiled, CompilerResult::CompileError);
@@ -1485,16 +1496,21 @@ mod tests {
 
     #[test]
     fn if_statement() {
-        let chunk: Chunk = compile_to_chunk("if (true) { print 1; }");
+        let chunk: Chunk = compile_to_chunk("if (true) { print(1); }");
         let expected = [
             OpCode::True as u8,
             OpCode::JumpIfFalse as u8, // Jump 1 FROM
             0x0,
-            0x7,
+            0xc,
             OpCode::Pop as u8,
-            OpCode::Constant as u8,
+            OpCode::GetGlobal as u8,
             0,
-            OpCode::Print as u8,
+            OpCode::Constant as u8,
+            1,
+            OpCode::Constant as u8,
+            2,
+            OpCode::Call as u8,
+            OpCode::Pop as u8,
             OpCode::Jump as u8, // Jump 2 FROM
             0x0,
             0x1,
@@ -1507,23 +1523,33 @@ mod tests {
 
     #[test]
     fn if_else_statement() {
-        let chunk: Chunk = compile_to_chunk("if (true) { print 1; } else { print 2; }");
+        let chunk: Chunk = compile_to_chunk("if (true) { print(1); } else { print(2); }");
         let expected = [
             OpCode::True as u8,
             OpCode::JumpIfFalse as u8, // Jump 1 FROM
             0x0,
-            0x7,
+            0xc,
             OpCode::Pop as u8,
-            OpCode::Constant as u8,
+            OpCode::GetGlobal as u8,
             0,
-            OpCode::Print as u8,
-            OpCode::Jump as u8, // Jump 2 FROM
-            0x0,
-            0x4,
-            OpCode::Pop as u8, // Jump 1 TO
             OpCode::Constant as u8,
             1,
-            OpCode::Print as u8,
+            OpCode::Constant as u8,
+            2,
+            OpCode::Call as u8,
+            OpCode::Pop as u8,
+            OpCode::Jump as u8, // Jump 2 FROM
+            0x0,
+            0x9,
+            OpCode::Pop as u8, // Jump 1 TO
+            OpCode::GetGlobal as u8,
+            3,
+            OpCode::Constant as u8,
+            4,
+            OpCode::Constant as u8,
+            5,
+            OpCode::Call as u8,
+            OpCode::Pop as u8,
             OpCode::Eof as u8, // Jump 2 TO
         ];
         chunk.disassemble("test");
@@ -1532,36 +1558,47 @@ mod tests {
 
     #[test]
     fn bad_if_statements() {
-        let compiled = compile("else { print 2; }");
+        let compiled = compile("else { print(2); }");
         assert_eq!(compiled, CompilerResult::CompileError);
-        let compiled = compile("if print { print 2; }");
+        let compiled = compile("if print({ print(2); })");
         assert_eq!(compiled, CompilerResult::CompileError);
     }
 
     #[test]
     fn else_if_statements() {
-        let chunk: Chunk = compile_to_chunk("if (true) { print 1; } else if (false) { print 2; }");
+        let chunk: Chunk =
+            compile_to_chunk("if (true) { print(1); } else if (false) { print(2); }");
         let expected = [
             OpCode::True as u8,
             OpCode::JumpIfFalse as u8,
             0x0,
-            0x7,
+            0xc,
             OpCode::Pop as u8,
-            OpCode::Constant as u8,
+            OpCode::GetGlobal as u8,
             0,
-            OpCode::Print as u8,
+            OpCode::Constant as u8,
+            1,
+            OpCode::Constant as u8,
+            2,
+            OpCode::Call as u8,
+            OpCode::Pop as u8,
             OpCode::Jump as u8,
             0x0,
-            0xd,
+            0x12,
             OpCode::Pop as u8,
             OpCode::False as u8,
             OpCode::JumpIfFalse as u8,
             0x0,
-            0x7,
+            0xc,
             OpCode::Pop as u8,
+            OpCode::GetGlobal as u8,
+            3,
             OpCode::Constant as u8,
-            1,
-            OpCode::Print as u8,
+            4,
+            OpCode::Constant as u8,
+            5,
+            OpCode::Call as u8,
+            OpCode::Pop as u8,
             OpCode::Jump as u8,
             0x0,
             0x1,
@@ -1608,7 +1645,7 @@ mod tests {
 
     #[test]
     fn compiles_functions() {
-        compile_to_chunk("fn a() { print 1; }");
+        compile_to_chunk("fn a() { print(1); }");
         compile_to_chunk("fn f(a, b, c) { return a + b + c; }");
         compile_to_chunk("fn f(a, b, c) { fn g() { return 1; } }");
     }
@@ -1652,12 +1689,12 @@ mod tests {
     #[test]
     fn can_compile_both_expression_and_block_lambdas() {
         compile_to_chunk("let a = () => 1; let b = (x) => x * 5;");
-        compile_to_chunk("let a = () => {print 1;}; let b = (x) => {print x;};");
+        compile_to_chunk("let a = () => {print(1);}; let b = (x) => {print(x);};");
     }
 
     #[test]
     fn no_weird_statement_lambdas() {
-        let compiled = compile("let a = () => print 1;");
+        let compiled = compile("let a = () => if true {print(x)};");
         assert_eq!(compiled, CompilerResult::CompileError);
     }
 

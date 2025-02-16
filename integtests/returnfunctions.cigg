@@ -6,7 +6,7 @@ fn returnf() {
   return f;
 }
 let newf = returnf();
-print newf();
+print(newf());
 
 fn f() {
   fn g() {
@@ -21,11 +21,11 @@ fn f() {
   return g;
 }
 newf = f;
-print newf()()()();
+print(newf()()()());
 
 // Not sure if we want this? XD
 fn returnmyself() {
-  print 10;
+  print(10);
   return returnmyself;
 }
 

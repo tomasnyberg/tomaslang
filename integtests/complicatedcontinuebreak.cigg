@@ -26,5 +26,5 @@ for i in 10..50 {
         }
     }
 }
-print sum;
+print(sum);
 

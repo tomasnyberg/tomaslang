@@ -1,21 +1,21 @@
 // EXPECT true\nfalse\nfalse\ntrue\ntrue\nfalse\n0\n1\ntrue\n0\ntrue\n0\ntrue\ntrue
-print true and true;
-print true and false;
-print false and false;
-print true or true;
-print false or true;
-print false or false;
+print(true and true);
+print(true and false);
+print(false and false);
+print(true or true);
+print(false or true);
+print(false or false);
 
-print true and 0; // Leaves 0 on the stack which is a bit confusing but correct and fast
-print true and 1;
-print true and 1 and true;
-print true and 0 and true;
+print(true and 0); // Leaves 0 on the stack which is a bit confusing but correct and fast
+print(true and 1);
+print(true and 1 and true);
+print(true and 0 and true);
 
-print true and (0 or true);
+print(true and (0 or true));
 
 let x = 500;
-print true and (x - x);
-print true and (x*x > 2000);
+print(true and (x - x));
+print(true and (x*x > 2000));
 
 
-print (true and true and true and true and true and false) or (false or false or false or false or false or true);
+print((true and true and true and true and true and false) or (false or false or false or false or false or true));

@@ -1,7 +1,7 @@
 // EXPECT 5\n10\n1
 global a = 5;
-print a;
+print(a);
 global b = 10;
-print b;
+print(b);
 a = 11;
-print a - b;
+print(a - b);

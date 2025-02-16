@@ -2,17 +2,17 @@
 global ten = 10;
 fn f(z) {
   let x = 5;
-  print x;
+  print(x);
   fn g() {
     let y = 100;
-    print y + ten;
+    print(y + ten);
     y = y - 10;
-    print y + ten;
+    print(y + ten);
   }
 
   g();
   g = 5;
-  print x + g;
+  print(x + g);
 }
 
 f(100);

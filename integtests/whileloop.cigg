@@ -2,11 +2,11 @@
 let i = 0;
 while i < 3 {
   i = i + 1;
-  print i;
+  print(i);
 }
 
 let k = 5;
 while k/2 < 100 {
   k = k * 5;
-  print k;
+  print(k);
 }

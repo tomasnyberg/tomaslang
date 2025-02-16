@@ -1,4 +1,4 @@
 // EXPECT ERR [line 3] Error at '10': Cannot assign to constant variable\nCompile error
 const a = 10;
 a += 10;
-print a;
+print(a);

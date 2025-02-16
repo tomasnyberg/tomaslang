@@ -1,13 +1,13 @@
 // EXPECT hej\n12\n14\n16\n18
 let f = () => {
-  print "hej";
+  print("hej");
 };
 f();
 
 f = (x) => {
   for i in 1..5 {
     let y = 2*i+x;
-    print y;
+    print(y);
   }
 };
 

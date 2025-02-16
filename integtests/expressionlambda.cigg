@@ -1,10 +1,10 @@
 // EXPECT 25\n100\n5012500\n6
 let f = (x) => 5*x;
-print f(5);
+print(f(5));
 
 f = () => 100;
 
-print f();
+print(f());
 
 f = () => {
   let x = 100;
@@ -12,8 +12,8 @@ f = () => {
   return x * y;
 };
 
-print f();
+print(f());
 
 let g = (x, y, z) => x*y*z;
 
-print g(1,2,3);
+print(g(1,2,3));

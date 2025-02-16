@@ -5,16 +5,16 @@ fn f() {
 
 fn g() {
   return;
-  print 5;
+  print(5);
 }
 
 fn h() {
-  print "hej hopp:)";
+  print("hej hopp:)");
   return 10;
 }
 
-print f();
-print g();
-print f() + h();
+print(f());
+print(g());
+print(f() + h());
 
 

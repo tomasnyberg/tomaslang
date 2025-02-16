@@ -2,7 +2,7 @@
 global a = 5;
 fn printfun() {
   if a > 0 {
-    print a;
+    print(a);
     a = a - 1;
     printfun();
   }

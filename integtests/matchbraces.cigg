@@ -2,7 +2,7 @@
 let x = 10;
 match x {
     10 => {
-        print "hej hopp";
+        print("hej hopp");
     };
 };
 
@@ -11,7 +11,7 @@ for i in 0..3 {
     match i {
         _ => {
             xs :: i;
-            print xs;
+            print(xs);
         };
     };
 }

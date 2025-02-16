@@ -1,6 +1,6 @@
 // EXPECT 1\n-1\n2450\n126365\n7\n0\n0\n3
-print 1 % 2;
-print -5 % 2;
+print(1 % 2);
+print(-5 % 2);
 
 let tot = 0;
 for i in 1..100 {
@@ -8,7 +8,7 @@ for i in 1..100 {
         tot = tot + i;
     }
 }
-print tot;
+print(tot);
 
 tot = 0;
 let y = 7525;
@@ -18,9 +18,9 @@ for i in 1..1000 {
         tot = tot + i;
     }
 }
-print tot;
+print(tot);
 
-print 5 + 5 % 3;
-print 5 /_ 2 % 2;
-print 5*2 % 2;
-print 5*17/_3 % 3*3;
+print(5 + 5 % 3);
+print(5 /_ 2 % 2);
+print(5*2 % 2);
+print(5*17/_3 % 3*3);

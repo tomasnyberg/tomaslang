@@ -4,4 +4,4 @@ let y = match x {
 
 };
 
-print y;
+print(y);

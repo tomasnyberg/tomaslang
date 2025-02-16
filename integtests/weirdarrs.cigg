@@ -1,18 +1,18 @@
 // EXPECT 5\n100\n100\n58\nh\ne\nj
 
 let matrix = [[1..4], [4..7], [7..10]];
-print matrix[1][1];
+print(matrix[1][1]);
 let mid = matrix[1];
 mid[2] = 100;
-print matrix[1][2];
+print(matrix[1][2]);
 mid = 5; // reference now points to something else
-print matrix[1][2];
+print(matrix[1][2]);
 
 matrix = [[[[[[1..100]]]]]];
-print matrix[0][0][0][0][0][57];
+print(matrix[0][0][0][0][0][57]);
 
 fn hejfun(i) {
-    print "hej"[i];
+    print("hej"[i]);
 }
 let xs = [hejfun, hejfun, hejfun];
 for i in 0..3 {

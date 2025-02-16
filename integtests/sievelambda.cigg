@@ -33,7 +33,7 @@ let prime = [true]*(count + 1);
 let p = 2;
 let primeprint = (i, prime) => {
     if prime[i] {
-        print i;
+        print(i);
     }
 };
 while p * p <= count {

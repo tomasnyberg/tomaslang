@@ -13,4 +13,4 @@ for i in 1..100 {
     total += j*i;
   }
 }
-print total;
+print(total);

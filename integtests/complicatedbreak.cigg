@@ -13,7 +13,7 @@ for i in 1..100 {
         break;
     }
 }
-print tot;
+print(tot);
 
 tot = 0;
 for i in 57..83 {
@@ -37,4 +37,4 @@ for i in 57..83 {
         }
     }
 }
-print tot;
+print(tot);

@@ -43,7 +43,7 @@ while p * p <= count {
 }
 for i in 1..count {
   if prime[i] {
-    print i;
+    print(i);
   }
 }
 

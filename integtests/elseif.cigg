@@ -1,22 +1,22 @@
 // EXPECT second\nThird\ne is true\nd is true\nh is true
 let a = true;
 if false {
-  print "first";
+  print("first");
 } else if a {
-  print "second";
+  print("second");
 } else {
-  print "third";
+  print("third");
 }
 
 
 let b = false;
 a = false;
 if a {
-  print "First";
+  print("First");
 } else if b {
-  print "Second";
+  print("Second");
 } else {
-  print "Third";
+  print("Third");
 }
 
 a = false;
@@ -26,31 +26,31 @@ global d = false;
 global e = true;
 
 if a {
-  print "a is true";
+  print("a is true");
 } else if b {
-  print "b is true";
+  print("b is true");
 } else if c {
-  print "c is true";
+  print("c is true");
 } else if d {
-  print "d is true";
+  print("d is true");
 } else if e {
-  print "e is true";
+  print("e is true");
 } else {
-  print "None are true";
+  print("None are true");
 }
 
 if a {
-  print "a is true";
+  print("a is true");
 } else if b {
-  print "b is true";
+  print("b is true");
 } else if c {
-  print "c is true";
+  print("c is true");
 } else if !d {
-  print "d is true";
+  print("d is true");
 } else if e {
-  print "e is true";
+  print("e is true");
 } else {
-  print "None are true";
+  print("None are true");
 }
 
 a = false;
@@ -60,15 +60,15 @@ let g = false;
 let h = true;
 
 if a {
-  print "a is true";
+  print("a is true");
 } else if b {
-  print "b is true";
+  print("b is true");
 } else if f {
-  print "f is true";
+  print("f is true");
 } else if g {
-  print "g is true";
+  print("g is true");
 } else if h {
-  print "h is true";
+  print("h is true");
 } else {
-  print "None are true";
+  print("None are true");
 }

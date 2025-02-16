@@ -1,10 +1,10 @@
 // EXPECT f enter :)\ng enter:)\nc
 fn f() {
-  print "f enter :)";
+  print("f enter :)");
   fn g() {
-    print "g enter:)";
+    print("g enter:)");
     fn h() {
-      print "c";
+      print("c");
     }
     h();
   }

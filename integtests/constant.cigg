@@ -1,9 +1,9 @@
 // EXPECT 5\n10
 let a = 100;
 const b = 95;
-print a - b;
+print(a - b);
 {
     let b; // This is a completely different variable
     b = 10;
-    print b;
+    print(b);
 }

@@ -1,6 +1,6 @@
 // EXPECT Hej hopp i lingonskogen\nhej hopp\nhejhejhejhejhej\n1hej\nhej1
-print "Hej hopp i lingonskogen";
-print "hej " + "hopp";
-print "hej"*5;
-print 1 + "hej";
-print "hej" + 1;
+print("Hej hopp i lingonskogen");
+print("hej " + "hopp");
+print("hej"*5);
+print(1 + "hej");
+print("hej" + 1);

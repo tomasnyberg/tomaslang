@@ -4,13 +4,13 @@ let high = 100;
 for i in low..high {
   low = low + high;
 }
-print low;
+print(low);
 
 let tot = 0;
 for i in -100..101 {
   tot = tot + i;
 }
-print tot;
+print(tot);
 
 tot = 0;
 for i in 0..3 {
@@ -20,7 +20,7 @@ for i in 0..3 {
     }
   }
 }
-print tot;
+print(tot);
 
 fn addten(x) {
   for i in 0..10 {
@@ -39,4 +39,4 @@ for i in 0..5 {
   y = y + 1;
  }
 }
-print x;
+print(x);

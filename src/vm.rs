@@ -223,7 +223,7 @@ impl VM {
     }
 
     fn add_native_fns(&mut self) {
-        self.add_native_fn("printnative", 1, |args| {
+        self.add_native_fn("print", 1, |args| {
             println!("{}", args[0]);
             Value::Null
         });
@@ -336,6 +336,8 @@ impl VM {
             return;
         }
         let result = function(&args);
+        // TODO: Not really sure why this pop has to be here? But it does...
+        self.pop();
         self.push(result);
     }
 
@@ -727,7 +729,6 @@ impl VM {
                         }
                     };
                 }
-                OpCode::Print => println!("{}", self.pop().as_string()),
                 OpCode::Range => {
                     let end = self.pop().as_number() as i32;
                     let start = self.pop().as_number() as i32;
@@ -816,7 +817,7 @@ mod tests {
 
     #[test]
     fn global_variables() {
-        let program = "global a = 1; print a; a = 5; print a;";
+        let program = "global a = 1; print(a); a = 5; print(a);";
         let mut vm = get_vm(program);
         let result = vm.run();
         assert_eq!(result, VmResult::OK);
@@ -829,7 +830,7 @@ mod tests {
         let mut vm = get_vm(program);
         let result = vm.run();
         assert_eq!(result, VmResult::RuntimeError);
-        let program = "print b;";
+        let program = "print(b);";
         let mut vm = get_vm(program);
         let result = vm.run();
         assert_eq!(result, VmResult::RuntimeError);
@@ -837,7 +838,7 @@ mod tests {
 
     #[test]
     fn block_scoped() {
-        let program = "let a = 1; { let a = 5; print a; }";
+        let program = "let a = 1; { let a = 5; print(a); }";
         let mut vm = get_vm(program);
         let result = vm.run();
         assert_eq!(result, VmResult::OK);
@@ -865,11 +866,11 @@ mod tests {
 
     #[test]
     fn function_calls() {
-        let program = "fn f(a) { print a; } f(5);";
+        let program = "fn f(a) { print(a); } f(5);";
         let mut vm = get_vm(program);
         let result = vm.run();
         assert_eq!(result, VmResult::OK);
-        let program = "fn f(a) { print a; } f(5,10);";
+        let program = "fn f(a) { print(a); } f(5,10);";
         let mut vm = get_vm(program);
         let result = vm.run();
         assert_eq!(result, VmResult::RuntimeError);
@@ -877,11 +878,11 @@ mod tests {
 
     #[test]
     fn basic_hm() {
-        let program = "let hm = {1: 2, 3: 4}; print hm[1];";
+        let program = "let hm = {1: 2, 3: 4}; print(hm[1]);";
         let mut vm = get_vm(program);
         let result = vm.run();
         assert_eq!(result, VmResult::OK);
-        let program = "let hm = {1: 2, 3: 4}; print hm[10];";
+        let program = "let hm = {1: 2, 3: 4}; print(hm[10]);";
         let mut vm = get_vm(program);
         let result = vm.run();
         assert_eq!(result, VmResult::RuntimeError);

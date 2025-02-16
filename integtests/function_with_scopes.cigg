@@ -6,17 +6,17 @@ fn f() {
   }
   return x;
 }
-print f();
+print(f());
 
 fn g() {
   let i = 0;
   {
-    print i;
+    print(i);
     {
-      print "scope two:)";
+      print("scope two:)");
       {
         fn deeeepfn() {
-          print "DEEP :O";
+          print("DEEP :O");
         }
         {
           {

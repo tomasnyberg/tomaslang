@@ -10,15 +10,15 @@
 */
 let a = 100;
 a += 1;
-print a;
+print(a);
 a -= 1;
-print a;
+print(a);
 a *= 2;
-print a;
+print(a);
 a /_= 2;
-print a;
+print(a);
 a %= 2;
-print a;
+print(a);
 a += 10;
 a /= 5;
-print a;
+print(a);

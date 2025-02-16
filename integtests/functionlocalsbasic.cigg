@@ -5,4 +5,4 @@ fn f() {
   let z = 7;
   return x;
 }
-print f();
+print(f());

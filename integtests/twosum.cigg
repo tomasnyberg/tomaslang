@@ -13,4 +13,4 @@ fn two_sum(xs, target) {
   return [-1,-1];
 }
 
-print two_sum(xs, xs[38] + xs[158]);
+print(two_sum(xs, xs[38] + xs[158]));

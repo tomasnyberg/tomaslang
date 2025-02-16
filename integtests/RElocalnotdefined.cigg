@@ -2,6 +2,6 @@
 let a = 100;
 {
     let a = a;
-    print a;
+    print(a);
 }
 

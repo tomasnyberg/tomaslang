@@ -57,7 +57,6 @@ pub enum TokenType {
     In,
     Null,
     Or,
-    Print,
     Return,
     Super,
     This,
@@ -211,7 +210,6 @@ impl Scanner {
             "in" => Token::new(TokenType::In, lexeme, self.line),
             "null" => Token::new(TokenType::Null, lexeme, self.line),
             "or" => Token::new(TokenType::Or, lexeme, self.line),
-            "print" => Token::new(TokenType::Print, lexeme, self.line),
             "return" => Token::new(TokenType::Return, lexeme, self.line),
             "super" => Token::new(TokenType::Super, lexeme, self.line),
             "this" => Token::new(TokenType::This, lexeme, self.line),
@@ -413,7 +411,7 @@ mod tests {
 
     #[test]
     fn parses_keywords() {
-        let input = "and else false for fn if null or print return super this true let while";
+        let input = "and else false for fn if null or return super this true let while";
         let tokens = super::scan(input);
 
         let expected = vec![
@@ -425,7 +423,6 @@ mod tests {
             TokenType::If,
             TokenType::Null,
             TokenType::Or,
-            TokenType::Print,
             TokenType::Return,
             TokenType::Super,
             TokenType::This,

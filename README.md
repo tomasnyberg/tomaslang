@@ -59,7 +59,7 @@ fn two_sum(xs, target) {
   return [-1,-1];
 }
 
-print two_sum(xs, xs[38] + xs[158]);
+print(two_sum(xs, xs[38] + xs[158]));
 ```
 
 ### Sieve of Erastothenes
@@ -95,7 +95,7 @@ fn sieve(n) {
     return result;
 }
 // prints [1, 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47]
-print sieve(50);
+print(sieve(50));
 ```
 
 ## Usage / Installation

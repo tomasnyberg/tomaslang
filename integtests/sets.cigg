@@ -2,5 +2,5 @@
 
 let set = {1,2,3,4};
 for i in 1..6 {
-  print i in set;
+  print(i in set);
 } 

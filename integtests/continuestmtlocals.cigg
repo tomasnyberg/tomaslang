@@ -3,7 +3,7 @@ for i in 1..5 {
   let y = 100;
   y = y*i; 
   if y == 100 {
-    print y;
+    print(y);
     continue;
   }
   fn localfn() {
@@ -18,8 +18,8 @@ for i in 1..5 {
   }
   let z = localfn();
   if z * i < 2400 {
-    print z*i;
+    print(z*i);
     continue;
   }
-  print i;
+  print(i);
 }

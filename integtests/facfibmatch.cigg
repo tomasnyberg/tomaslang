@@ -13,5 +13,5 @@ fn fac(n) {
     _ => n*fac(n-1);
   };
 }
-print fib(10);
-print fac(5);
+print(fib(10));
+print(fac(5));
