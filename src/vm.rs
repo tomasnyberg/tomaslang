@@ -23,6 +23,7 @@ pub enum Value {
     Array(Rc<RefCell<Vec<Value>>>),
     HashMap(Rc<RefCell<CiggHashMap>>),
     ReturnAddress(usize),
+    NativeFn(NativeFn),
 }
 
 // NOTE: this might not hold up perfectly
@@ -65,6 +66,9 @@ impl Hash for Value {
                 unimplemented!()
             }
             Value::ReturnAddress(_) => {
+                unimplemented!()
+            }
+            Value::NativeFn(_) => {
                 unimplemented!()
             }
         }
@@ -116,6 +120,7 @@ impl Value {
                 result
             }
             Value::ReturnAddress(x) => format!("RA {x}"),
+            Value::NativeFn(n) => format!("<native fn {}>", n.name),
         }
     }
 
@@ -193,16 +198,48 @@ pub struct VM {
     frame_starts: Vec<usize>,
 }
 
-impl VM {
-    pub fn new(chunk: Chunk) -> Self {
+#[derive(PartialEq, Clone, Debug)]
+pub struct NativeFn {
+    name: String,
+    arity: u8,
+    function: fn(&[Value]) -> Value,
+}
+
+impl NativeFn {
+    fn new(name: &str, arity: u8, function: fn(&[Value]) -> Value) -> Self {
         Self {
+            name: name.to_string(),
+            arity,
+            function,
+        }
+    }
+}
+
+impl VM {
+    fn add_native_fn(&mut self, name: &str, arity: u8, function: fn(&[Value]) -> Value) {
+        let native_fn = NativeFn::new(name, arity, function);
+        let value = Value::NativeFn(native_fn);
+        self.globals.insert(name.to_string(), value);
+    }
+
+    fn add_native_fns(&mut self) {
+        self.add_native_fn("printnative", 1, |args| {
+            println!("{}", args[0]);
+            Value::Null
+        });
+    }
+
+    pub fn new(chunk: Chunk) -> Self {
+        let mut result = Self {
             stack: Vec::new(),
             ip: 0,
             chunk,
             had_runtime_error: false,
             globals: HashMap::new(),
             frame_starts: vec![0],
-        }
+        };
+        result.add_native_fns();
+        result
     }
 
     pub fn load_chunk(&mut self, chunk: Chunk) {
@@ -262,6 +299,43 @@ impl VM {
         eprint!("{}", message);
         eprintln!(" at [line {}] in script", self.chunk.lines[self.ip - 1]);
         self.had_runtime_error = true;
+    }
+
+    fn call_cigg_function(&mut self, arg_c: usize) {
+        let function = match self.peek(arg_c) {
+            Value::Function(f) => f,
+            _ => unreachable!(),
+        };
+        if (function.arity as usize) != arg_c {
+            self.runtime_error(&format!(
+                "Expected {} arguments but got {}",
+                function.arity, arg_c
+            ));
+            return;
+        }
+        let return_address = Value::ReturnAddress(self.ip);
+        self.ip = function.start;
+        // TODO PERF: don't really like the idea of inserting with an offset
+        self.insert(return_address, self.stack.len() - arg_c - 1);
+        self.frame_starts.push(self.stack.len() - arg_c - 1);
+    }
+
+    fn call_native_function(&mut self, arg_c: usize) {
+        let args = self.stack.split_off(self.stack.len() - arg_c);
+        let native_fn = match self.peek(0) {
+            Value::NativeFn(nf) => nf,
+            _ => unreachable!(),
+        };
+        if args.len() != native_fn.arity as usize {
+            self.runtime_error(&format!(
+                "Expected {} arguments but got {}",
+                native_fn.arity,
+                args.len()
+            ));
+            return;
+        }
+        let result = (native_fn.function)(&args);
+        self.push(result);
     }
 
     fn binary_op(&mut self, op: OpCode) {
@@ -376,6 +450,7 @@ impl VM {
             Value::ReturnAddress(_) => {
                 panic!("Return address should not be possible to evaluate for truth")
             }
+            Value::NativeFn(_) => true,
         }
     }
 
@@ -642,25 +717,14 @@ impl VM {
                 OpCode::Call => {
                     let arg_c = self.pop().as_number() as usize;
                     let called = self.peek(arg_c);
-                    let called_fn = match called {
-                        Value::Function(f) => f,
+                    match called {
+                        Value::Function(_) => self.call_cigg_function(arg_c),
+                        Value::NativeFn(_) => self.call_native_function(arg_c),
                         _ => {
                             self.runtime_error("Can only call functions");
                             return VmResult::RuntimeError;
                         }
                     };
-                    if called_fn.arity != arg_c as u8 {
-                        self.runtime_error(&format!(
-                            "Expected {} arguments but got {}",
-                            called_fn.arity, arg_c
-                        ));
-                        return VmResult::RuntimeError;
-                    }
-                    let return_address = Value::ReturnAddress(self.ip);
-                    self.ip = called_fn.start;
-                    // TODO PERF: don't really like the idea of inserting with an offset
-                    self.insert(return_address, self.stack.len() - arg_c - 1);
-                    self.frame_starts.push(self.stack.len() - arg_c - 1);
                 }
                 OpCode::Print => println!("{}", self.pop().as_string()),
                 OpCode::Range => {
