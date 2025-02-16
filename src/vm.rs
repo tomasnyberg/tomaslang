@@ -301,20 +301,25 @@ impl VM {
         self.had_runtime_error = true;
     }
 
+    fn check_arity(&mut self, expected: u8, got: usize) -> bool {
+        if expected as usize != got {
+            self.runtime_error(&format!("Expected {} arguments but got {}", expected, got));
+            return false;
+        }
+        true
+    }
+
     fn call_cigg_function(&mut self, arg_c: usize) {
         let function = match self.peek(arg_c) {
             Value::Function(f) => f,
             _ => unreachable!(),
         };
-        if (function.arity as usize) != arg_c {
-            self.runtime_error(&format!(
-                "Expected {} arguments but got {}",
-                function.arity, arg_c
-            ));
+        let start = function.start;
+        if !self.check_arity(function.arity, arg_c) {
             return;
         }
         let return_address = Value::ReturnAddress(self.ip);
-        self.ip = function.start;
+        self.ip = start;
         // TODO PERF: don't really like the idea of inserting with an offset
         self.insert(return_address, self.stack.len() - arg_c - 1);
         self.frame_starts.push(self.stack.len() - arg_c - 1);
@@ -326,15 +331,11 @@ impl VM {
             Value::NativeFn(nf) => nf,
             _ => unreachable!(),
         };
-        if args.len() != native_fn.arity as usize {
-            self.runtime_error(&format!(
-                "Expected {} arguments but got {}",
-                native_fn.arity,
-                args.len()
-            ));
+        let function = native_fn.function;
+        if !self.check_arity(native_fn.arity, arg_c) {
             return;
         }
-        let result = (native_fn.function)(&args);
+        let result = function(&args);
         self.push(result);
     }
 
