@@ -1,0 +1,3 @@
+// EXPECT ERR File not found: thisfiledoesnotexist.txt at [line 2] in script\nRuntime error
+let file = read_file("thisfiledoesnotexist.txt");
+print(file);

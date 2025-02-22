@@ -202,11 +202,11 @@ pub struct VM {
 pub struct NativeFn {
     name: String,
     arity: u8,
-    function: fn(&[Value]) -> Value,
+    function: fn(&mut VM, &[Value]) -> Value,
 }
 
 impl NativeFn {
-    fn new(name: &str, arity: u8, function: fn(&[Value]) -> Value) -> Self {
+    fn new(name: &str, arity: u8, function: fn(&mut VM, &[Value]) -> Value) -> Self {
         Self {
             name: name.to_string(),
             arity,
@@ -216,19 +216,25 @@ impl NativeFn {
 }
 
 impl VM {
-    fn add_native_fn(&mut self, name: &str, arity: u8, function: fn(&[Value]) -> Value) {
+    fn add_native_fn(&mut self, name: &str, arity: u8, function: fn(&mut VM, &[Value]) -> Value) {
         let native_fn = NativeFn::new(name, arity, function);
         let value = Value::NativeFn(native_fn);
         self.globals.insert(name.to_string(), value);
     }
 
     fn add_native_fns(&mut self) {
-        self.add_native_fn("print", 1, |args| {
+        self.add_native_fn("print", 1, |_vm_ref, args| {
             println!("{}", args[0]);
             Value::Null
         });
-        self.add_native_fn("read_file", 1, |args| {
+        self.add_native_fn("read_file", 1, |vm_ref, args| {
             let filename = args[0].as_string();
+            if !(std::path::Path::new(&filename).exists()
+                && std::path::Path::new(&filename).is_file())
+            {
+                vm_ref.runtime_error(&format!("File not found: {}", filename));
+                return Value::Null;
+            }
             let contents = std::fs::read_to_string(filename).unwrap_or_else(|_| "".to_string());
             Value::String(Rc::new(RefCell::new(contents.chars().collect())))
         });
@@ -300,7 +306,7 @@ impl VM {
         self.chunk.disassemble_instruction(self.ip);
     }
 
-    fn runtime_error(&mut self, message: &str) {
+    pub fn runtime_error(&mut self, message: &str) {
         eprint!("{}", message);
         eprintln!(" at [line {}] in script", self.chunk.lines[self.ip - 1]);
         self.had_runtime_error = true;
@@ -340,7 +346,7 @@ impl VM {
         if !self.check_arity(native_fn.arity, arg_c) {
             return;
         }
-        let result = function(&args);
+        let result = function(self, &args);
         // TODO: Not really sure why this pop has to be here? But it does...
         self.pop();
         self.push(result);
