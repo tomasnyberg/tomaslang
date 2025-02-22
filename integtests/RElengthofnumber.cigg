@@ -1,0 +1,2 @@
+// EXPECT ERR Expected array, string or hashmap for len at [line 2] in script\nRuntime error
+len(5);

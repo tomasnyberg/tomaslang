@@ -1,0 +1,9 @@
+// EXPECT 4\n23\n3
+let xs = [1..5];
+let s = "hej hopp i lingonskogen";
+let map = {1:5, 2:3, 5: "hej"};
+
+print(len(xs));
+print(len(s));
+print(len(map));
+

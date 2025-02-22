@@ -7,6 +7,7 @@
 - [X] global variables (they kind of suck though)
 - [X] Comparisons (e.g. >, !=, ==)
 - [X] logical operators (and, or)
+- [X] length of collections with len()
 
 ## Can't live without it
 - [X] blocks (with { })

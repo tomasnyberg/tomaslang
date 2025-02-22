@@ -238,6 +238,18 @@ impl VM {
             let contents = std::fs::read_to_string(filename).unwrap_or_else(|_| "".to_string());
             Value::String(Rc::new(RefCell::new(contents.chars().collect())))
         });
+        self.add_native_fn("len", 1, |vm_ref, args| {
+            let target = &args[0];
+            match target {
+                Value::Array(a) => Value::Number(a.borrow().len() as f64),
+                Value::String(s) => Value::Number(s.borrow().len() as f64),
+                Value::HashMap(m) => Value::Number(m.borrow().0.len() as f64),
+                _ => {
+                    vm_ref.runtime_error("Expected array, string or hashmap for len");
+                    Value::Null
+                }
+            }
+        });
     }
 
     pub fn new(chunk: Chunk) -> Self {
