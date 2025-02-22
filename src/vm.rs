@@ -227,6 +227,11 @@ impl VM {
             println!("{}", args[0]);
             Value::Null
         });
+        self.add_native_fn("read_file", 1, |args| {
+            let filename = args[0].as_string();
+            let contents = std::fs::read_to_string(filename).unwrap_or_else(|_| "".to_string());
+            Value::String(Rc::new(RefCell::new(contents.chars().collect())))
+        });
     }
 
     pub fn new(chunk: Chunk) -> Self {

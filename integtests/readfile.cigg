@@ -1,0 +1,14 @@
+/*
+// EXPECT MULTI
+// EXPECT 2\n7\n7.5\n28\n-10
+
+print(1+1);
+print(1+3*2);
+print(5/2 + 5);
+print(10*2 + 8);
+print(10-2*10);
+// EXPECT MULTI END
+*/
+let file = read_file("integtests/pemdas.cigg");
+
+print(file);
