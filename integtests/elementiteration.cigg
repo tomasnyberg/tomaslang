@@ -1,0 +1,14 @@
+// EXPECT 0\n5\n10\n15\n20\n25\nh\np\ng\ne
+let xs = [0..26];
+for i in 0..len(xs) {
+  if i % 5 == 0 {
+    print(xs[i]);
+  }
+}
+
+let s = "hej hopp i lingonskogen";
+for i in 0..len(s) {
+  if i % 7 == 0 {
+    print(s[i]);
+  }
+}
