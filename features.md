@@ -17,7 +17,7 @@
 - [X] Arrays
 - [X] Hashmaps / Sets
 - [X] Python-like 'in' operator (arrays, strings, hashmaps)
-- [ ] I/O with outside world, e.g. read file/stdin
+- [X] I/O with outside world, e.g. read file/stdin
 
 ## Don't want to live without it
 - [X] constant variables
