@@ -1,0 +1,5 @@
+// EXPECT true\nfalse\nfalse\ntrue
+print(any([true, true, true]));
+print(any([false, false, false]));
+print(any(map ((x) => x % 2 != 0) [2,4,6,8,10,12,14,16,18,20]));
+print(any(map ((x) => x % 2 != 0) [2,4,6,7,10,12,14,16,18,20]));

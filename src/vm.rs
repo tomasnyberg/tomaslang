@@ -330,6 +330,26 @@ impl VM {
                 }
             }
         });
+        self.add_native_fn("any", 1, |vm_ref, args| {
+            let target = &args[0];
+            match target {
+                Value::Array(a) => Value::Bool(a.borrow().iter().any(|x| x.is_truthy())),
+                _ => {
+                    vm_ref.runtime_error("Expected array for any");
+                    Value::Null
+                }
+            }
+        });
+        self.add_native_fn("all", 1, |vm_ref, args| {
+            let target = &args[0];
+            match target {
+                Value::Array(a) => Value::Bool(a.borrow().iter().all(|x| x.is_truthy())),
+                _ => {
+                    vm_ref.runtime_error("Expected array for any");
+                    Value::Null
+                }
+            }
+        });
     }
 
     pub fn new(chunk: Chunk) -> Self {

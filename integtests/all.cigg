@@ -1,0 +1,5 @@
+// EXPECT true\nfalse\ntrue
+print(all([true, true, true]));
+print(all([true, false, true]));
+print(all(map ((x) => x % 2 == 0) [2,4,6,8,10,12,14,16,18,20]));
+

@@ -26,6 +26,7 @@
 - [X] Lambdas (preferably JavaScript-like ones)
 - [X] Ternary
 - [X] Rust-like match
+- [X] any/all (Python-like)
 - [ ] Multiline strings
 
 ## Syntax sugar
