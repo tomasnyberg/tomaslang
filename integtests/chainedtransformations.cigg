@@ -2,5 +2,5 @@
 let xs = filter even map ((x) => x*3) [1..10];
 print(xs);
 
-let ys = filter ((x) => x > 19600) map ((x) => x * 20) filter ((x) => x % 2 == 0) [1..1000];
+let ys = filter ((x) => x > 19600) map ((x) => x * 20) filter even [1..1000];
 print(ys);

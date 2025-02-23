@@ -364,6 +364,16 @@ impl VM {
                 }
             }
         });
+        self.add_native_fn("even", 1, |vm_ref, args| {
+            let target = &args[0];
+            match target {
+                Value::Number(n) => Value::Bool(n % 2.0 == 0.0),
+                _ => {
+                    vm_ref.runtime_error("Expected array for any");
+                    Value::Null
+                }
+            }
+        });
     }
 
     pub fn new(chunk: Chunk) -> Self {
