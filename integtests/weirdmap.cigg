@@ -1,0 +1,13 @@
+// EXPECT [100, 200, 300]\n[1, 2, 3]\n[1, 4, 25]
+print(map ((x) => x*100) [1,2,3]);
+
+
+fn fun_as_lambda(x) {
+    return x;
+}
+
+print(map (fun_as_lambda) [1,2,3]);
+
+print(map ((x) => {
+    return x*x;
+}) [1,2,5]);

@@ -61,6 +61,7 @@ pub enum TokenType {
     Super,
     This,
     True,
+    Transformation,
     Let,
     Const,
     While,
@@ -220,6 +221,7 @@ impl Scanner {
             "break" => Token::new(TokenType::Break, lexeme, self.line),
             "while" => Token::new(TokenType::While, lexeme, self.line),
             "match" => Token::new(TokenType::Match, lexeme, self.line),
+            "map" => Token::new(TokenType::Transformation, lexeme, self.line),
             _ => Token::new(TokenType::Identifier, lexeme, self.line),
         }
     }
@@ -703,6 +705,14 @@ mod tests {
             TokenType::Identifier,
             TokenType::Eof,
         ];
+        verify_output(tokens, expected);
+    }
+
+    #[test]
+    fn parses_transformations() {
+        let input = "map";
+        let tokens = super::scan(input);
+        let expected = vec![TokenType::Transformation, TokenType::Eof];
         verify_output(tokens, expected);
     }
 }

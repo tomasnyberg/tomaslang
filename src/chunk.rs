@@ -96,6 +96,7 @@ impl Chunk {
             OpCode::Null => self.simple_instruction("NULL_OP", offset),
             OpCode::True => self.simple_instruction("TRUE_OP", offset),
             OpCode::False => self.simple_instruction("FALSE_OP", offset),
+            OpCode::Transform => self.byte_instruction("TRANSFORM_OP", offset),
             OpCode::Return => self.simple_instruction("RETURN_OP", offset),
             OpCode::Eof => self.simple_instruction("EOF_OP", offset),
         }

@@ -194,6 +194,7 @@ pub struct VM {
     ip: usize,
     chunk: Chunk,
     had_runtime_error: bool,
+    run_until_return: bool,
     globals: HashMap<String, Value>,
     frame_starts: Vec<usize>,
 }
@@ -214,6 +215,38 @@ impl NativeFn {
         }
     }
 }
+
+pub struct TransformationFunction {
+    pub name: &'static str,
+    function: fn(&mut VM),
+}
+
+fn map(vm: &mut VM) {
+    let array = vm.pop();
+    let function = vm.pop();
+
+    let mut result = Vec::new();
+    match array {
+        Value::Array(a) => {
+            let a = a.borrow();
+            for item in a.iter() {
+                vm.push(function.clone());
+                vm.push(item.clone());
+                let mapped_item = vm.execute_cigg_function(1);
+                result.push(mapped_item);
+            }
+            vm.push(Value::Array(Rc::new(RefCell::new(result))));
+        }
+        _ => {
+            vm.runtime_error("Expected array for map");
+        }
+    }
+}
+
+pub const TRANSFORMATION_FNS: [TransformationFunction; 1] = [TransformationFunction {
+    name: "map",
+    function: map,
+}];
 
 impl VM {
     fn add_native_fn(&mut self, name: &str, arity: u8, function: fn(&mut VM, &[Value]) -> Value) {
@@ -257,6 +290,7 @@ impl VM {
             stack: Vec::new(),
             ip: 0,
             chunk,
+            run_until_return: false,
             had_runtime_error: false,
             globals: HashMap::new(),
             frame_starts: vec![0],
@@ -332,10 +366,10 @@ impl VM {
         true
     }
 
-    fn call_cigg_function(&mut self, arg_c: usize) {
+    fn initialize_cigg_function(&mut self, arg_c: usize) {
         let function = match self.peek(arg_c) {
             Value::Function(f) => f,
-            _ => unreachable!(),
+            other => panic!("Expected function , got {}", other),
         };
         let start = function.start;
         if !self.check_arity(function.arity, arg_c) {
@@ -346,6 +380,14 @@ impl VM {
         // TODO PERF: don't really like the idea of inserting with an offset
         self.insert(return_address, self.stack.len() - arg_c - 1);
         self.frame_starts.push(self.stack.len() - arg_c - 1);
+    }
+
+    fn execute_cigg_function(&mut self, arg_c: usize) -> Value {
+        self.initialize_cigg_function(arg_c);
+        self.run_until_return = true;
+        self.run();
+        self.run_until_return = false;
+        self.pop()
     }
 
     fn call_native_function(&mut self, arg_c: usize) {
@@ -744,7 +786,7 @@ impl VM {
                     let arg_c = self.pop().as_number() as usize;
                     let called = self.peek(arg_c);
                     match called {
-                        Value::Function(_) => self.call_cigg_function(arg_c),
+                        Value::Function(_) => self.initialize_cigg_function(arg_c),
                         Value::NativeFn(_) => self.call_native_function(arg_c),
                         _ => {
                             self.runtime_error("Can only call functions");
@@ -761,6 +803,10 @@ impl VM {
                 OpCode::Null => self.push(Value::Null),
                 OpCode::True => self.push(Value::Bool(true)),
                 OpCode::False => self.push(Value::Bool(false)),
+                OpCode::Transform => {
+                    let transform = self.read_byte();
+                    (TRANSFORMATION_FNS[transform as usize].function)(self);
+                }
                 OpCode::RaiseError => {
                     let message = self.pop();
                     self.runtime_error(&format!("Error: {}", message));
@@ -782,6 +828,9 @@ impl VM {
                         }
                     }
                     self.push(returned_value);
+                    if self.run_until_return {
+                        return VmResult::OK;
+                    }
                 }
                 OpCode::Eof => {
                     return VmResult::OK;

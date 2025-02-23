@@ -2,7 +2,7 @@ use std::ops::Shr;
 use std::rc::Rc;
 use std::{cell::RefCell, collections::HashMap};
 
-use crate::{chunk::*, scanner::*, vm::Value};
+use crate::{chunk::*, scanner::*, vm::Value, vm::TRANSFORMATION_FNS};
 
 macro_rules! active_chunk {
     ($this:expr) => {
@@ -124,6 +124,7 @@ pub enum OpCode {
     Null,
     True,
     False,
+    Transform,
     Return,
     Eof,
 }
@@ -217,8 +218,9 @@ impl OpCode {
             35 => OpCode::Null,
             36 => OpCode::True,
             37 => OpCode::False,
-            38 => OpCode::Return,
-            39 => OpCode::Eof,
+            38 => OpCode::Transform,
+            39 => OpCode::Return,
+            40 => OpCode::Eof,
             _ => panic!("unexpected opcode (did you update this match after adding an op?)"),
         }
     }
@@ -240,56 +242,57 @@ impl Compiler {
             );
         };
         use TokenType::*;
-        rule(LeftParen,    Some(Self::grouping),  Some(Self::call),   Precedence::Call);
-        rule(RightParen,   None,                  None,               Precedence::None);
-        rule(LeftBrace,    Some(Self::hash_map),  None,               Precedence::None);
-        rule(RightBrace,   None,                  None,               Precedence::None);
-        rule(LeftBracket,  Some(Self::array),     Some(Self::access), Precedence::Call);
-        rule(RightBracket, None,                  None,               Precedence::None);
-        rule(BigRightArrow,None,                  None,               Precedence::None);
-        rule(Comma,        None,                  None,               Precedence::None);
-        rule(QuestionMark, None,                  Some(Self::ternary),Precedence::Assignment);
-        rule(Colon,        None,                  None,               Precedence::None);
-        rule(ColonColon,   None,                  Some(Self::append), Precedence::Term);
-        rule(Dot,          None,                  None,               Precedence::None);
+        rule(LeftParen,     Some(Self::grouping),      Some(Self::call),   Precedence::Call);
+        rule(RightParen,    None,                      None,               Precedence::None);
+        rule(LeftBrace,     Some(Self::hash_map),      None,               Precedence::None);
+        rule(RightBrace,    None,                      None,               Precedence::None);
+        rule(LeftBracket,   Some(Self::array),         Some(Self::access), Precedence::Call);
+        rule(RightBracket,  None,                      None,               Precedence::None);
+        rule(BigRightArrow, None,                      None,               Precedence::None);
+        rule(Comma,         None,                      None,               Precedence::None);
+        rule(QuestionMark,  None,                      Some(Self::ternary),Precedence::Assignment);
+        rule(Colon,         None,                      None,               Precedence::None);
+        rule(ColonColon,    None,                      Some(Self::append), Precedence::Term);
+        rule(Dot,           None,                      None,               Precedence::None);
         // Is precedence correct here? Not sure.
-        rule(DotDot,       None,                  Some(Self::range),  Precedence::Term);
-        rule(Minus,        Some(Self::unary),     Some(Self::binary), Precedence::Term);
-        rule(Plus,         None,                  Some(Self::binary), Precedence::Term);
-        rule(Semicolon,    None,                  None,               Precedence::None);
-        rule(Slash,        None,                  Some(Self::binary), Precedence::Factor);
-        rule(SlashDown,    None,                  Some(Self::binary), Precedence::Factor);
-        rule(Star,         None,                  Some(Self::binary), Precedence::Factor);
-        rule(Bang,         Some(Self::unary),     None,               Precedence::None);
-        rule(BangEqual,    None,                  Some(Self::binary), Precedence::Equality);
-        rule(Equal,        None,                  None,               Precedence::None);
-        rule(EqualEqual,   None,                  Some(Self::binary), Precedence::Equality);
-        rule(Greater,      None,                  Some(Self::binary), Precedence::Comparison);
-        rule(GreaterEqual, None,                  Some(Self::binary), Precedence::Comparison);
-        rule(Less,         None,                  Some(Self::binary), Precedence::Comparison);
-        rule(LessEqual,    None,                  Some(Self::binary), Precedence::Comparison);
-        rule(Percent,      None,                  Some(Self::binary), Precedence::Factor);
-        rule(Identifier,   Some(Self::variable),  None,               Precedence::None);
-        rule(String,       Some(Self::string),    None,               Precedence::None);
-        rule(Number,       Some(Self::number),    None,               Precedence::None);
-        rule(And,          None,                  Some(Self::and),    Precedence::And);
-        rule(Match,        Some(Self::match_expr),None,               Precedence::None);
-        rule(Else,         None,                  None,               Precedence::None);
-        rule(False,        Some(Self::literal),   None,               Precedence::None);
-        rule(Fn,           None,                  None,               Precedence::None);
-        rule(For,          None,                  None,               Precedence::None);
-        rule(If,           None,                  None,               Precedence::None);
-        rule(In,           None,                  Some(Self::in_op),  Precedence::Comparison);
-        rule(Null,         Some(Self::literal),   None,               Precedence::None);
-        rule(Or,           None,                  Some(Self::or),     Precedence::Or);
-        rule(Return,       None,                  None,               Precedence::None);
-        rule(Super,        None,                  None,               Precedence::None);
-        rule(This,         None,                  None,               Precedence::None);
-        rule(True,         Some(Self::literal),   None,               Precedence::None);
-        rule(Let,          None,                  None,               Precedence::None);
-        rule(While,        None,                  None,               Precedence::None);
-        rule(Error,        None,                  None,               Precedence::None);
-        rule(Eof,          None,                  None,               Precedence::None);
+        rule(DotDot,        None,                      Some(Self::range),  Precedence::Term);
+        rule(Minus,         Some(Self::unary),         Some(Self::binary), Precedence::Term);
+        rule(Plus,          None,                      Some(Self::binary), Precedence::Term);
+        rule(Semicolon,     None,                      None,               Precedence::None);
+        rule(Slash,         None,                      Some(Self::binary), Precedence::Factor);
+        rule(SlashDown,     None,                      Some(Self::binary), Precedence::Factor);
+        rule(Star,          None,                      Some(Self::binary), Precedence::Factor);
+        rule(Bang,          Some(Self::unary),         None,               Precedence::None);
+        rule(BangEqual,     None,                      Some(Self::binary), Precedence::Equality);
+        rule(Equal,         None,                      None,               Precedence::None);
+        rule(EqualEqual,    None,                      Some(Self::binary), Precedence::Equality);
+        rule(Greater,       None,                      Some(Self::binary), Precedence::Comparison);
+        rule(GreaterEqual,  None,                      Some(Self::binary), Precedence::Comparison);
+        rule(Less,          None,                      Some(Self::binary), Precedence::Comparison);
+        rule(LessEqual,     None,                      Some(Self::binary), Precedence::Comparison);
+        rule(Percent,       None,                      Some(Self::binary), Precedence::Factor);
+        rule(Identifier,    Some(Self::variable),      None,               Precedence::None);
+        rule(String,        Some(Self::string),        None,               Precedence::None);
+        rule(Number,        Some(Self::number),        None,               Precedence::None);
+        rule(And,           None,                      Some(Self::and),    Precedence::And);
+        rule(Match,         Some(Self::match_expr),    None,               Precedence::None);
+        rule(Else,          None,                      None,               Precedence::None);
+        rule(False,         Some(Self::literal),       None,               Precedence::None);
+        rule(Fn,            None,                      None,               Precedence::None);
+        rule(For,           None,                      None,               Precedence::None);
+        rule(If,            None,                      None,               Precedence::None);
+        rule(In,            None,                      Some(Self::in_op),  Precedence::Comparison);
+        rule(Null,          Some(Self::literal),       None,               Precedence::None);
+        rule(Or,            None,                      Some(Self::or),     Precedence::Or);
+        rule(Return,        None,                      None,               Precedence::None);
+        rule(Super,         None,                      None,               Precedence::None);
+        rule(This,          None,                      None,               Precedence::None);
+        rule(True,          Some(Self::literal),       None,               Precedence::None);
+        rule(Transformation,Some(Self::transformation),None,               Precedence::Call);
+        rule(Let,           None,                      None,               Precedence::None);
+        rule(While,         None,                      None,               Precedence::None);
+        rule(Error,         None,                      None,               Precedence::None);
+        rule(Eof,           None,                      None,               Precedence::None);
 
         rules
     }
@@ -378,6 +381,20 @@ impl Compiler {
         self.emit_constant(Value::Number(arg_c as f64));
         self.consume(TokenType::RightParen, "Expected ')' after arguments");
         self.emit_byte(OpCode::Call as u8, true);
+    }
+
+    fn transformation(&mut self) {
+        for (i, tf) in TRANSFORMATION_FNS.iter().enumerate() {
+            if self.peek(1).lexeme == tf.name {
+                self.consume(TokenType::LeftParen, "Expected '(' after transformation");
+                self.expression();
+                self.consume(TokenType::RightParen, "Expected ')' after transformation");
+                self.expression();
+                self.emit_byte(OpCode::Transform as u8, true);
+                self.emit_byte(i as u8, true);
+                return;
+            }
+        }
     }
 
     fn literal(&mut self) {
