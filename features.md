@@ -34,8 +34,8 @@
 - [X] compound assignment, e.g. `+=`, `*=`
 - [X] Python-like list generation, e.g. `[True]*100`
 - [ ] Haskell-like list transformations, e.g. `map (+5) [1,2,3,4,5]`
-  - [ ] map
-  - [ ] filter
+  - [X] map
+  - [X] filter
   - [ ] reduce
   - [ ] take
   - [ ] drop
