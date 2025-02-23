@@ -140,6 +140,23 @@ impl Value {
         matches!(self, Value::Array(_))
     }
 
+    pub fn is_truthy(&self) -> bool {
+        match self {
+            Value::Bool(b) => *b,
+            Value::Null => false,
+            Value::Number(n) => *n != 0.0,
+            Value::String(s) => !s.borrow().is_empty(),
+            Value::Function(_) => true,
+            Value::Range(_) => true,
+            Value::Array(a) => !a.borrow().is_empty(),
+            Value::HashMap(_) => true,
+            Value::ReturnAddress(_) => {
+                panic!("Return address should not be possible to evaluate for truth")
+            }
+            Value::NativeFn(_) => true,
+        }
+    }
+
     pub fn check_index_inbounds<T>(&self, index: &Value, target: &[T]) -> Option<String> {
         let target_type = match self {
             Value::Array(_) => "array",
@@ -505,23 +522,6 @@ impl VM {
         }
     }
 
-    fn is_truthy(&self, value: &Value) -> bool {
-        match value {
-            Value::Bool(b) => *b,
-            Value::Null => false,
-            Value::Number(n) => *n != 0.0,
-            Value::String(s) => !s.borrow().is_empty(),
-            Value::Function(_) => true,
-            Value::Range(_) => true,
-            Value::Array(a) => !a.borrow().is_empty(),
-            Value::HashMap(_) => true,
-            Value::ReturnAddress(_) => {
-                panic!("Return address should not be possible to evaluate for truth")
-            }
-            Value::NativeFn(_) => true,
-        }
-    }
-
     fn global_identifier(&mut self) -> String {
         let name_index = self.read_byte();
         let name = self.chunk.constants[name_index as usize].clone();
@@ -659,7 +659,7 @@ impl VM {
                 }
                 OpCode::Not => {
                     let value = self.pop();
-                    let result = Value::Bool(!self.is_truthy(&value));
+                    let result = Value::Bool(!&value.is_truthy());
                     self.push(result);
                 }
                 OpCode::Next => {
@@ -758,13 +758,13 @@ impl VM {
                 }
                 OpCode::JumpIfFalse => {
                     let offset = self.read_short() as usize;
-                    if !self.is_truthy(self.peek(0)) {
+                    if !self.peek(0).is_truthy() {
                         self.ip += offset;
                     }
                 }
                 OpCode::JumpIfTrue => {
                     let offset = self.read_short() as usize;
-                    if self.is_truthy(self.peek(0)) {
+                    if self.peek(0).is_truthy() {
                         self.ip += offset;
                     }
                 }
