@@ -238,6 +238,24 @@ pub struct TransformationFunction {
     function: fn(&mut VM),
 }
 
+fn apply_function(vm: &mut VM, function: Value, item: Value) -> Value {
+    match function {
+        Value::Function(_) => {
+            vm.push(function.clone());
+            vm.push(item.clone());
+            vm.execute_cigg_function(1)
+        }
+        Value::NativeFn(ref nf) => {
+            let args = vec![item.clone()];
+            (nf.function)(vm, &args)
+        }
+        _ => {
+            vm.runtime_error("Expected function or native function");
+            Value::Null
+        }
+    }
+}
+
 fn map(vm: &mut VM) {
     let array = vm.pop();
     let function = vm.pop();
@@ -247,10 +265,8 @@ fn map(vm: &mut VM) {
         Value::Array(a) => {
             let a = a.borrow();
             for item in a.iter() {
-                vm.push(function.clone());
-                vm.push(item.clone());
-                let mapped_item = vm.execute_cigg_function(1);
-                result.push(mapped_item);
+                let mapped = apply_function(vm, function.clone(), item.clone());
+                result.push(mapped);
             }
             vm.push(Value::Array(Rc::new(RefCell::new(result))));
         }
@@ -269,9 +285,7 @@ fn filter(vm: &mut VM) {
         Value::Array(a) => {
             let a = a.borrow();
             for item in a.iter() {
-                vm.push(function.clone());
-                vm.push(item.clone());
-                let passed_filter = vm.execute_cigg_function(1).is_truthy();
+                let passed_filter = apply_function(vm, function.clone(), item.clone()).is_truthy();
                 if passed_filter {
                     result.push(item.clone());
                 }
