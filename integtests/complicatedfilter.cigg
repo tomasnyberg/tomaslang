@@ -1,0 +1,9 @@
+// EXPECT 1000\n1500
+fn is_even(x) {
+  return x % 2 == 0;
+}
+
+let xs = [0..2000];
+
+print(len(filter (is_even) xs));
+print(len(filter ((x) => x % 8 != 6) (map ((x) => x*2) xs)));

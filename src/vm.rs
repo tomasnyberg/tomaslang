@@ -260,10 +260,40 @@ fn map(vm: &mut VM) {
     }
 }
 
-pub const TRANSFORMATION_FNS: [TransformationFunction; 1] = [TransformationFunction {
-    name: "map",
-    function: map,
-}];
+fn filter(vm: &mut VM) {
+    let array = vm.pop();
+    let function = vm.pop();
+
+    let mut result = Vec::new();
+    match array {
+        Value::Array(a) => {
+            let a = a.borrow();
+            for item in a.iter() {
+                vm.push(function.clone());
+                vm.push(item.clone());
+                let passed_filter = vm.execute_cigg_function(1).is_truthy();
+                if passed_filter {
+                    result.push(item.clone());
+                }
+            }
+            vm.push(Value::Array(Rc::new(RefCell::new(result))));
+        }
+        _ => {
+            vm.runtime_error("Expected array for filter");
+        }
+    }
+}
+
+pub const TRANSFORMATION_FNS: [TransformationFunction; 2] = [
+    TransformationFunction {
+        name: "map",
+        function: map,
+    },
+    TransformationFunction {
+        name: "filter",
+        function: filter,
+    },
+];
 
 impl VM {
     fn add_native_fn(&mut self, name: &str, arity: u8, function: fn(&mut VM, &[Value]) -> Value) {

@@ -222,6 +222,7 @@ impl Scanner {
             "while" => Token::new(TokenType::While, lexeme, self.line),
             "match" => Token::new(TokenType::Match, lexeme, self.line),
             "map" => Token::new(TokenType::Transformation, lexeme, self.line),
+            "filter" => Token::new(TokenType::Transformation, lexeme, self.line),
             _ => Token::new(TokenType::Identifier, lexeme, self.line),
         }
     }
