@@ -74,7 +74,7 @@ fn sieve(n) {
         }
     }
     // Python-like list generation!
-    let prime = [true]*(n + 1);
+    global prime = [true]*(n + 1);
     let p = 2;
     while p * p <= n {
       if prime[p] {
@@ -82,17 +82,8 @@ fn sieve(n) {
       }
       p+=1;
     }
-    let result = [];
-    // Lambdas!
-    let addprime = (prime, i, result) => {
-      if prime[i] {
-        result :: i; // Append operator (mutating)
-      }
-    };
-    for i in 1..n {
-      addprime(prime, i, result);
-    }
-    return result;
+    // Lambdas, and Haskell-like transformations!
+    return filter ((x) => prime[x]) [1..n];
 }
 // prints [1, 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47]
 print(sieve(50));
