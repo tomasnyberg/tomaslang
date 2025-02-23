@@ -57,14 +57,17 @@ def find_diff(expected, result):
             return
 
 
-def verify_output(expecteds, outs, filename):
-    for expected, result, output_type in zip(expecteds, outs, ["stdout", "stderr"]):
+def verify_output(expecteds, stdout, stderr, filename):
+    for expected, result, output_type in zip(expecteds, [stdout, stderr], ["stdout", "stderr"]):
         if expected != "" and result != expected:
             print(f"integ test {filename} \033[31mfailed\033[0m")
             print(f"Expected {output_type}:")
             print(expected)
             print(f"Got {output_type}:")
             print(result)
+            if output_type == "stdout" and stderr != "":
+                print("stderr:")
+                print(stderr)
             find_diff(expected, result)
             return False
     else:
@@ -80,7 +83,7 @@ def run_whole_dir(directory):
             continue
         expecteds = find_expecteds(directory + filename)
         stdout, stderr = run_file(directory + filename)
-        if verify_output(expecteds, [stdout, stderr], filename):
+        if verify_output(expecteds, stdout, stderr, filename):
             passed += 1
         else:
             failed += 1
