@@ -386,9 +386,17 @@ impl Compiler {
     fn transformation(&mut self) {
         for (i, tf) in TRANSFORMATION_FNS.iter().enumerate() {
             if self.peek(1).lexeme == tf.name {
-                self.consume(TokenType::LeftParen, "Expected '(' after transformation");
-                self.expression();
-                self.consume(TokenType::RightParen, "Expected ')' after transformation");
+                if self.peek(0).token_type == TokenType::LeftParen {
+                    self.consume(TokenType::LeftParen, "Expected '(' after transformation");
+                    self.expression();
+                    self.consume(TokenType::RightParen, "Expected ')' after transformation");
+                } else if self.peek(0).token_type == TokenType::Identifier {
+                    // variable() expects the identifier to have been consumed
+                    self.advance();
+                    self.variable();
+                } else {
+                    self.error_at_current("Expected '(' or identifier after transformation");
+                }
                 self.expression();
                 self.emit_byte(OpCode::Transform as u8, true);
                 self.emit_byte(i as u8, true);

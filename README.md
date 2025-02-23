@@ -82,8 +82,10 @@ fn sieve(n) {
       }
       p+=1;
     }
-    // Lambdas, and Haskell-like transformations!
-    return filter ((x) => prime[x]) [1..n];
+    // Lambdas!
+    let is_prime = (x) => prime[x];
+    // Haskell-like list transformations!
+    return filter is_prime [1..n];
 }
 // prints [1, 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47]
 print(sieve(50));

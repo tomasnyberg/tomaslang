@@ -1,0 +1,9 @@
+// EXPECT [2, 4, 6, 8, 10]\n[2, 4, 6, 8, 10]
+fn even(x) {
+  return x % 2 == 0;
+}
+
+let times_two = (x) => x*2;
+
+print(filter even [1..11]);
+print(map times_two [1..6]);
