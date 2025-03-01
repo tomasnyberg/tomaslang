@@ -298,7 +298,23 @@ fn filter(vm: &mut VM) {
     }
 }
 
-pub const TRANSFORMATION_FNS: [TransformationFunction; 2] = [
+fn words(vm: &mut VM) {
+    let string = vm.pop();
+    let delimiter = vm.pop();
+    if !string.is_string() || !delimiter.is_string() {
+        vm.runtime_error("Expected string as input and delimiter for words");
+        return;
+    }
+    let string = string.as_string();
+    let delimiter = delimiter.as_string();
+    let words = string.split(&delimiter);
+    let words: Vec<Value> = words
+        .map(|word| Value::String(Rc::new(RefCell::new(word.chars().collect()))))
+        .collect();
+    vm.push(Value::Array(Rc::new(RefCell::new(words))));
+}
+
+pub const TRANSFORMATION_FNS: [TransformationFunction; 3] = [
     TransformationFunction {
         name: "map",
         function: map,
@@ -306,6 +322,10 @@ pub const TRANSFORMATION_FNS: [TransformationFunction; 2] = [
     TransformationFunction {
         name: "filter",
         function: filter,
+    },
+    TransformationFunction {
+        name: "words",
+        function: words,
     },
 ];
 

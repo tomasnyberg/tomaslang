@@ -37,13 +37,13 @@
 - [ ] Haskell-like list transformations, e.g. `map (+5) [1,2,3,4,5]`
   - [X] map
   - [X] filter
+  - [X] words
   - [ ] reduce
   - [ ] take
   - [ ] drop
   - [ ] takeWhile
   - [ ] dropWhile
   - [ ] max/min
-  - [ ] words
 - [ ] Python-like list comprehensions, e.g. `[x*5 for x in xs]`
 
 ## Syntax sugar (sweetness++)

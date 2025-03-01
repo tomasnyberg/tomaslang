@@ -1,0 +1,4 @@
+// EXPECT [hej, hopp, i, lingonskogen]\n[hej, i lingonskogen]
+let s = "hej hopp i lingonskogen";
+print(words " " s);
+print(words " hopp " s);

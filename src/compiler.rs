@@ -394,6 +394,9 @@ impl Compiler {
                     // variable() expects the identifier to have been consumed
                     self.advance();
                     self.variable();
+                } else if self.peek(0).token_type == TokenType::String {
+                    self.advance();
+                    self.string();
                 } else {
                     self.error_at_current("Expected '(' or identifier after transformation");
                 }
