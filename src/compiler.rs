@@ -383,26 +383,64 @@ impl Compiler {
         self.emit_byte(OpCode::Call as u8, true);
     }
 
+    fn emit_transform(&mut self, i: usize) {
+        self.emit_byte(OpCode::Transform as u8, true);
+        self.emit_byte(i as u8, true);
+    }
+
     fn transformation(&mut self) {
         for (i, tf) in TRANSFORMATION_FNS.iter().enumerate() {
             if self.peek(1).lexeme == tf.name {
-                if self.peek(0).token_type == TokenType::LeftParen {
-                    self.consume(TokenType::LeftParen, "Expected '(' after transformation");
-                    self.expression();
-                    self.consume(TokenType::RightParen, "Expected ')' after transformation");
-                } else if self.peek(0).token_type == TokenType::Identifier {
-                    // variable() expects the identifier to have been consumed
-                    self.advance();
-                    self.variable();
-                } else if self.peek(0).token_type == TokenType::String {
-                    self.advance();
-                    self.string();
-                } else {
-                    self.error_at_current("Expected '(' or identifier after transformation");
+                match tf.name {
+                    "map" | "filter" => {
+                        if self.peek(0).token_type == TokenType::LeftParen {
+                            self.consume(TokenType::LeftParen, "Expected '(' after transformation");
+                            self.expression();
+                            self.consume(
+                                TokenType::RightParen,
+                                "Expected ')' after transformation",
+                            );
+                        } else if self.peek(0).token_type == TokenType::Identifier {
+                            // variable() expects the identifier to have been consumed
+                            self.advance();
+                            self.variable();
+                        } else {
+                            self.error_at_current(
+                                "Expected '(' or identifier after transformation",
+                            );
+                        }
+                        self.expression();
+                        self.emit_byte(OpCode::Transform as u8, true);
+                        // Identifies which transformation function to call
+                        self.emit_byte(i as u8, true);
+                    }
+                    "words" => {
+                        let first_arg_type = self.peek(0).token_type;
+                        let second_arg_type = self.peek(-1).token_type;
+                        // Do we have 'words " " s' or 'words delim s'?
+                        if second_arg_type == TokenType::Identifier
+                            || second_arg_type == TokenType::String
+                        {
+                            self.advance();
+                            if first_arg_type == TokenType::String {
+                                self.string();
+                            } else if first_arg_type == TokenType::Identifier {
+                                self.variable();
+                            } else {
+                                self.error_at_current(
+                                    "Expected string or identifier as delimiter to words",
+                                );
+                            }
+                            self.expression();
+                            self.emit_transform(i);
+                        } else {
+                            self.expression();
+                            self.emit_transform(i + 1); // Output words_simple instead.
+                        }
+                    }
+                    _ => {}
                 }
-                self.expression();
-                self.emit_byte(OpCode::Transform as u8, true);
-                self.emit_byte(i as u8, true);
+
                 return;
             }
         }

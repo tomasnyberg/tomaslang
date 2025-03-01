@@ -298,9 +298,19 @@ fn filter(vm: &mut VM) {
     }
 }
 
-fn words(vm: &mut VM) {
+fn words_delimiter(vm: &mut VM) {
     let string = vm.pop();
     let delimiter = vm.pop();
+    words(vm, string, delimiter);
+}
+
+fn words_simple(vm: &mut VM) {
+    let space = Value::String(Rc::new(RefCell::new(" ".chars().collect())));
+    let string = vm.pop();
+    words(vm, string, space);
+}
+
+fn words(vm: &mut VM, string: Value, delimiter: Value) {
     if !string.is_string() || !delimiter.is_string() {
         vm.runtime_error("Expected string as input and delimiter for words");
         return;
@@ -314,7 +324,7 @@ fn words(vm: &mut VM) {
     vm.push(Value::Array(Rc::new(RefCell::new(words))));
 }
 
-pub const TRANSFORMATION_FNS: [TransformationFunction; 3] = [
+pub const TRANSFORMATION_FNS: [TransformationFunction; 4] = [
     TransformationFunction {
         name: "map",
         function: map,
@@ -325,7 +335,12 @@ pub const TRANSFORMATION_FNS: [TransformationFunction; 3] = [
     },
     TransformationFunction {
         name: "words",
-        function: words,
+        function: words_delimiter,
+    },
+    // NOTE: Has to be right after words since the compiler assumes so.
+    TransformationFunction {
+        name: "words_simple",
+        function: words_simple,
     },
 ];
 

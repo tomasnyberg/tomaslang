@@ -1,4 +1,6 @@
-// EXPECT [hej, hopp, i, lingonskogen]\n[hej, i lingonskogen]
+// EXPECT [hej, hopp, i, lingonskogen]\n[hej, hopp, i, lingonskogen]\n[hej, i lingonskogen]
 let s = "hej hopp i lingonskogen";
 print(words " " s);
+print(words s); // shorthand syntax
 print(words " hopp " s);
+
