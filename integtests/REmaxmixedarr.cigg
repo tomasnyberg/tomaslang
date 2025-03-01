@@ -1,0 +1,2 @@
+// EXPECT ERR Expected array of numbers for max at [line 2] in script\nRuntime error
+max(["hej", "hopp", 1, 2, 3]);
