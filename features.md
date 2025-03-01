@@ -27,6 +27,7 @@
 - [X] Ternary
 - [X] Rust-like match
 - [X] any/all (Python-like)
+- [ ] Collection iteration (e.g. for x in xs)
 - [ ] Multiline strings
 
 ## Syntax sugar
