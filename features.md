@@ -27,6 +27,7 @@
 - [X] Ternary
 - [X] Rust-like match
 - [X] any/all (Python-like)
+- [X] max/min (Python-like)
 - [ ] Collection iteration (e.g. for x in xs)
 - [ ] Multiline strings
 
@@ -44,7 +45,6 @@
   - [ ] drop
   - [ ] takeWhile
   - [ ] dropWhile
-  - [ ] max/min
 - [ ] Python-like list comprehensions, e.g. `[x*5 for x in xs]`
 
 ## Syntax sugar (sweetness++)

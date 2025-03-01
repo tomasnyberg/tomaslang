@@ -1,0 +1,4 @@
+// EXPECT 999\n1
+let xs = [1..1000];
+print(max(xs));
+print(min(xs));

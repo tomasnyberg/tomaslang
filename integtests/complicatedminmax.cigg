@@ -1,0 +1,2 @@
+// EXPECT 99
+print(max([min(filter even [1..100]), max(filter ((x) => !even(x)) [1..100])]));

@@ -351,6 +351,31 @@ impl VM {
         self.globals.insert(name.to_string(), value);
     }
 
+    fn fold_numbers<F>(vm: &mut VM, target: &Value, identity: f64, op: F, func_name: &str) -> Value
+    where
+        F: Fn(f64, f64) -> f64,
+    {
+        match target {
+            Value::Array(a) => {
+                let array = a.borrow();
+                if !array.iter().all(|x| x.is_number()) {
+                    vm.runtime_error(&format!("Expected array of numbers for {}", func_name));
+                    return Value::Null;
+                }
+                let result = array.iter().map(|x| x.as_number()).fold(identity, op);
+                if result == identity {
+                    vm.runtime_error(&format!("Empty array for {}", func_name));
+                    return Value::Null;
+                }
+                Value::Number(result)
+            }
+            _ => {
+                vm.runtime_error(&format!("Expected array of numbers for {}", func_name));
+                Value::Null
+            }
+        }
+    }
+
     fn add_native_fns(&mut self) {
         self.add_native_fn("print", 1, |_vm_ref, args| {
             println!("{}", args[0]);
@@ -408,6 +433,12 @@ impl VM {
                     Value::Null
                 }
             }
+        });
+        self.add_native_fn("max", 1, |vm_ref, args| {
+            Self::fold_numbers(vm_ref, &args[0], -f64::INFINITY, f64::max, "max")
+        });
+        self.add_native_fn("min", 1, |vm_ref, args| {
+            Self::fold_numbers(vm_ref, &args[0], f64::INFINITY, f64::min, "min")
         });
     }
 
