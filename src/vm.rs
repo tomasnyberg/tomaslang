@@ -1,7 +1,10 @@
 use std::hash::{Hash, Hasher};
 use std::{cell::RefCell, collections::HashMap, fmt, rc::Rc};
 
-use crate::{chunk::Chunk, compiler::Function, compiler::OpCode, compiler::Range};
+use crate::{
+    chunk::Chunk, compiler::Function, compiler::Iterable, compiler::Iterator, compiler::OpCode,
+    compiler::Range,
+};
 
 #[derive(Debug, Clone, Eq)]
 pub struct CiggHashMap(HashMap<Value, Value>);
@@ -12,7 +15,7 @@ impl PartialEq for CiggHashMap {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum Value {
     Number(f64),
     Bool(bool),
@@ -20,10 +23,31 @@ pub enum Value {
     String(Rc<RefCell<Vec<char>>>),
     Function(Function),
     Range(Range),
+    Iterable(Box<dyn Iterable>),
     Array(Rc<RefCell<Vec<Value>>>),
     HashMap(Rc<RefCell<CiggHashMap>>),
     ReturnAddress(usize),
     NativeFn(NativeFn),
+}
+
+// Needed for type acrobatics with Iterable
+impl PartialEq for Value {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Value::Number(a), Value::Number(b)) => a == b,
+            (Value::Bool(a), Value::Bool(b)) => a == b,
+            (Value::Null, Value::Null) => true,
+            (Value::String(a), Value::String(b)) => *a.borrow() == *b.borrow(),
+            (Value::Function(a), Value::Function(b)) => a == b,
+            (Value::Range(a), Value::Range(b)) => a == b,
+            (Value::Iterable(a), Value::Iterable(b)) => a.eq(b),
+            (Value::Array(a), Value::Array(b)) => *a.borrow() == *b.borrow(),
+            (Value::HashMap(a), Value::HashMap(b)) => *a.borrow() == *b.borrow(),
+            (Value::ReturnAddress(a), Value::ReturnAddress(b)) => a == b,
+            (Value::NativeFn(a), Value::NativeFn(b)) => a == b,
+            _ => false,
+        }
+    }
 }
 
 // NOTE: this might not hold up perfectly
@@ -62,6 +86,9 @@ impl Hash for Value {
             Value::Range(_) => {
                 unimplemented!()
             }
+            Value::Iterable(_) => {
+                unimplemented!()
+            }
             Value::HashMap(_) => {
                 unimplemented!()
             }
@@ -95,6 +122,7 @@ impl Value {
             Value::String(s) => s.borrow().iter().collect(),
             Value::Function(f) => format!("<fn {} (starts at {})>", f.name.lexeme, f.start),
             Value::Range(r) => r.as_debug_string(),
+            Value::Iterable(_) => "iterable".to_string(),
             Value::Array(a) => {
                 let a = a.borrow();
                 let mut result = String::from("[");
@@ -148,6 +176,7 @@ impl Value {
             Value::String(s) => !s.borrow().is_empty(),
             Value::Function(_) => true,
             Value::Range(_) => true,
+            Value::Iterable(_) => true,
             Value::Array(a) => !a.borrow().is_empty(),
             Value::HashMap(_) => true,
             Value::ReturnAddress(_) => {
@@ -765,7 +794,7 @@ impl VM {
                             };
                             let mut temp = Vec::new();
                             while let Some(next) = item.next() {
-                                temp.push(Value::Number(next as f64));
+                                temp.push(next);
                             }
                             temp.reverse();
                             array.extend(temp);
@@ -803,21 +832,24 @@ impl VM {
                     self.push(result);
                 }
                 OpCode::Next => {
-                    let range = self.pop();
-                    // TODO PERF: validating this every iteration might be slow
-                    let mut range = match range {
-                        Value::Range(r) => r,
+                    let iter_val = self.pop();
+                    let mut iter_box: Box<dyn Iterable> = match iter_val {
+                        Value::Range(r) => Box::new(r),
+                        Value::Iterable(iter) => iter,
+                        Value::Array(a) => Box::new(Iterator { vec: a, current: 0 }),
                         _ => {
-                            self.runtime_error("Expected range");
+                            self.runtime_error("Expected an iterable");
                             return VmResult::RuntimeError;
                         }
                     };
-                    let next = range.next();
-                    if let Some(next) = next {
-                        self.push(Value::Range(range));
-                        self.push(Value::Number(next as f64));
-                    } else {
-                        self.push(Value::Null);
+                    match iter_box.next() {
+                        Some(n) => {
+                            self.push(Value::Iterable(iter_box));
+                            self.push(n);
+                        }
+                        None => {
+                            self.push(Value::Null);
+                        }
                     }
                 }
                 OpCode::Pop => {

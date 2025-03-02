@@ -1,3 +1,5 @@
+use std::any::Any;
+use std::fmt::Debug;
 use std::ops::Shr;
 use std::rc::Rc;
 use std::{cell::RefCell, collections::HashMap};
@@ -41,12 +43,25 @@ pub struct Function {
     const_idx: usize,
 }
 
+pub trait Iterable: Debug {
+    fn next(&mut self) -> Option<Value>;
+    fn clone_box(&self) -> Box<dyn Iterable>;
+    fn eq_box(&self, other: &dyn Iterable) -> bool;
+    fn as_any(&self) -> &dyn Any;
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Range {
     pub start: i32,
     pub end: i32,
     pub current: i32,
     pub step: i32,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Iterator {
+    pub vec: Rc<RefCell<Vec<Value>>>,
+    pub current: usize,
 }
 
 impl Range {
@@ -57,15 +72,6 @@ impl Range {
             current: start,
             step: if start < end { 1 } else { -1 },
         }
-    }
-
-    pub fn next(&mut self) -> Option<i32> {
-        if self.current == self.end {
-            return None;
-        }
-        let current = self.current;
-        self.current += self.step;
-        Some(current)
     }
 
     pub fn as_debug_string(&self) -> String {
@@ -80,6 +86,68 @@ impl Range {
             self.current
         };
         format!("R {}..{}", lower, upper)
+    }
+}
+
+impl Iterable for Range {
+    fn next(&mut self) -> Option<Value> {
+        if self.current == self.end {
+            None
+        } else {
+            let current = self.current;
+            self.current += self.step;
+            Some(Value::Number(current as f64))
+        }
+    }
+    fn clone_box(&self) -> Box<dyn Iterable> {
+        Box::new(self.clone())
+    }
+    fn eq_box(&self, other: &dyn Iterable) -> bool {
+        if let Some(other_range) = other.as_any().downcast_ref::<Range>() {
+            self == other_range
+        } else {
+            false
+        }
+    }
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+impl Iterable for Iterator {
+    fn next(&mut self) -> Option<Value> {
+        if self.current == self.vec.borrow().len() {
+            None
+        } else {
+            let value = self.vec.borrow()[self.current].clone();
+            self.current += 1;
+            Some(value)
+        }
+    }
+    fn clone_box(&self) -> Box<dyn Iterable> {
+        Box::new(self.clone())
+    }
+    fn eq_box(&self, other: &dyn Iterable) -> bool {
+        if let Some(other_iter) = other.as_any().downcast_ref::<Iterator>() {
+            self == other_iter
+        } else {
+            false
+        }
+    }
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+impl Clone for Box<dyn Iterable> {
+    fn clone(&self) -> Box<dyn Iterable> {
+        self.clone_box()
+    }
+}
+
+impl PartialEq for Box<dyn Iterable> {
+    fn eq(&self, other: &Self) -> bool {
+        self.eq_box(&**other)
     }
 }
 

@@ -1,0 +1,13 @@
+// EXPECT 1\n2\n3\n4\n5\n1\n2\n3
+let xs = [1..6];
+for x in xs {
+  print(x);
+}
+
+fn return_array() {
+  return [1,2,3];
+}
+
+for x in return_array() {
+  print(x);
+}
