@@ -757,6 +757,35 @@ impl VM {
         }
     }
 
+    fn to_iterable_vec(&self, val: Value) -> Option<Vec<Value>> {
+        match val {
+            Value::Array(a) => Some(a.borrow().clone()),
+            // TODO PERF: String iteration might be slow.
+            Value::String(s) => {
+                let chars = s.borrow();
+                Some(
+                    chars
+                        .iter()
+                        .map(|ch| Value::String(Rc::new(RefCell::new(vec![*ch]))))
+                        .collect(),
+                )
+            }
+            Value::HashMap(hm) => {
+                let keys = hm.borrow().0.keys().cloned().collect();
+                Some(keys)
+            }
+            Value::Range(r) => {
+                let mut range = r.clone();
+                let mut vec = Vec::new();
+                while let Some(n) = range.next() {
+                    vec.push(n);
+                }
+                Some(vec)
+            }
+            _ => panic!("Expected iterable value, got {:?}", val),
+        }
+    }
+
     pub fn run(&mut self) -> VmResult {
         loop {
             self.trace_execution();
@@ -833,18 +862,23 @@ impl VM {
                 }
                 OpCode::Next => {
                     let iter_val = self.pop();
-                    let mut iter_box: Box<dyn Iterable> = match iter_val {
-                        Value::Range(r) => Box::new(r),
-                        Value::Iterable(iter) => iter,
-                        Value::Array(a) => Box::new(Iterator { vec: a, current: 0 }),
+                    let mut iter: Box<dyn Iterable> = match iter_val {
+                        Value::Iterable(iter_box) => iter_box,
                         _ => {
-                            self.runtime_error("Expected an iterable");
-                            return VmResult::RuntimeError;
+                            if let Some(vec) = self.to_iterable_vec(iter_val) {
+                                Box::new(Iterator {
+                                    vec: Rc::new(RefCell::new(vec)),
+                                    current: 0,
+                                })
+                            } else {
+                                self.runtime_error("Expected an iterable");
+                                return VmResult::RuntimeError;
+                            }
                         }
                     };
-                    match iter_box.next() {
+                    match iter.next() {
                         Some(n) => {
-                            self.push(Value::Iterable(iter_box));
+                            self.push(Value::Iterable(iter));
                             self.push(n);
                         }
                         None => {

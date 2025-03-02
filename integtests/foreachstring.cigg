@@ -1,0 +1,5 @@
+// EXPECT h\ne\nj\n \nh\no\np\np
+let s = "hej hopp";
+for x in s {
+  print(x);
+}

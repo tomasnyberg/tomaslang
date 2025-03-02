@@ -28,7 +28,7 @@
 - [X] Rust-like match
 - [X] any/all (Python-like)
 - [X] max/min (Python-like)
-- [ ] Collection iteration (e.g. for x in xs)
+- [X] Collection iteration (e.g. for x in xs)
 - [ ] Multiline strings
 
 ## Syntax sugar
