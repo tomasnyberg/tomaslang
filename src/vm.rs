@@ -604,6 +604,21 @@ impl VM {
                     self.push(Value::String(Rc::new(RefCell::new(a.chars().collect()))));
                     return;
                 }
+                if a.is_array() && b.is_array() {
+                    let a = match a {
+                        Value::Array(a) => a,
+                        _ => unreachable!(),
+                    };
+                    let b = match b {
+                        Value::Array(b) => b,
+                        _ => unreachable!(),
+                    };
+                    let mut result = Vec::new();
+                    result.extend(a.borrow().iter().cloned());
+                    result.extend(b.borrow().iter().cloned());
+                    self.push(Value::Array(Rc::new(RefCell::new(result))));
+                    return;
+                }
                 self.push(Value::Number(a.as_number() + b.as_number()));
             }
             OpCode::Sub => {
