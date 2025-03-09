@@ -619,6 +619,12 @@ impl VM {
                     self.push(Value::Array(Rc::new(RefCell::new(result))));
                     return;
                 }
+                if !a.is_number() || !b.is_number() {
+                    self.runtime_error(
+                        "Expected numbers, a string, or two arrays for add operation",
+                    );
+                    return;
+                }
                 self.push(Value::Number(a.as_number() + b.as_number()));
             }
             OpCode::Sub => {
@@ -1176,6 +1182,18 @@ mod tests {
         let result = vm.run();
         assert_eq!(result, VmResult::OK);
         let program = "let hm = {1: 2, 3: 4}; print(hm[10]);";
+        let mut vm = get_vm(program);
+        let result = vm.run();
+        assert_eq!(result, VmResult::RuntimeError);
+    }
+
+    #[test]
+    fn bad_add() {
+        let program = "let x = {'cats': 5} + 5;";
+        let mut vm = get_vm(program);
+        let result = vm.run();
+        assert_eq!(result, VmResult::RuntimeError);
+        let program = "[1,2,3] + 5;";
         let mut vm = get_vm(program);
         let result = vm.run();
         assert_eq!(result, VmResult::RuntimeError);
