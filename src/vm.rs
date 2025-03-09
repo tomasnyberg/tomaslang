@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 use std::{cell::RefCell, collections::HashMap, fmt, rc::Rc};
 
@@ -99,6 +100,30 @@ impl Hash for Value {
                 unimplemented!()
             }
         }
+    }
+}
+
+// NOTE: Comparing values not of the types below will give weird results, but I decided
+// I don't really care about it. Rust does care however so disable that linting message.
+#[allow(clippy::non_canonical_partial_ord_impl)]
+impl PartialOrd for Value {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        use Value::*;
+        match (self, other) {
+            (Number(a), Number(b)) => a.partial_cmp(b),
+            (Bool(a), Bool(b)) => Some(a.cmp(b)),
+            (Null, Null) => Some(Ordering::Equal),
+            (String(a), String(b)) => Some(a.borrow().cmp(&*b.borrow())),
+            (Array(a), Array(b)) => Some(a.borrow().cmp(&*b.borrow())),
+            (ReturnAddress(a), ReturnAddress(b)) => Some(a.cmp(b)),
+            _ => None,
+        }
+    }
+}
+
+impl Ord for Value {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other).unwrap()
     }
 }
 
@@ -792,7 +817,8 @@ impl VM {
                 )
             }
             Value::HashMap(hm) => {
-                let keys = hm.borrow().0.keys().cloned().collect();
+                let mut keys: Vec<Value> = hm.borrow().0.keys().cloned().collect();
+                keys.sort();
                 Some(keys)
             }
             Value::Range(r) => {
