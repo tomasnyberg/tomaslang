@@ -51,56 +51,64 @@ def find_diff(expected, result):
         if expected[c] == "\n":
             line += 1
         if expected[c] != result[c]:
-            print("Diff at character", c, "Expected:",
-                  repr(expected[c]), "Got:", repr(result[c]))
-            print("Line:", line)
-            return
+            errstring = ""
+            errstring += f"Diff at line {line} character {c}:\n"
+            errstring += f"Expected: {repr(expected[c])}\n"
+            errstring += f"Got: {repr(result[c])}\n"
+            return errstring
+    return ""
 
 
 def verify_output(expecteds, stdout, stderr, filename):
     for expected, result, output_type in zip(expecteds, [stdout, stderr], ["stdout", "stderr"]):
         if expected != "" and result != expected:
-            print(f"integ test {filename} \033[31mfailed\033[0m")
-            print(f"Expected {output_type}:")
-            print(expected)
-            print(f"Got {output_type}:")
-            print(result)
+            errstring = ""
+            errstring += f"Expected {output_type}:\n"
+            errstring += expected + "\n"
+            errstring += f"Got {output_type}:\n"
+            errstring += result + "\n"
             if output_type == "stdout" and stderr != "":
-                print("stderr:")
-                print(stderr)
-            find_diff(expected, result)
-            return False
+                errstring += "stderr:\n"
+                errstring += stderr + "\n"
+            errstring += find_diff(expected, result)
+            return [False, errstring, f"integ test {filename} \033[31mfailed\033[0m"]
     else:
-        print(f"integ test {filename} \033[32mpassed\033[0m")
-        return True
+        return [True, f"integ test {filename} \033[32mpassed\033[0m"]
 
 
 def run_whole_dir(directory):
     passed = 0
     failed = 0
+    errors = []
     for filename in os.listdir(directory):
         if os.path.isdir(directory + filename):
             continue
         expecteds = find_expecteds(directory + filename)
         stdout, stderr = run_file(directory + filename)
-        if verify_output(expecteds, stdout, stderr, filename):
+        result = verify_output(expecteds, stdout, stderr, filename)
+        if result[0]:
+            print(result[1])
             passed += 1
         else:
+            errors.append((filename, result[1]))
+            print(result[2])
             failed += 1
-    return (passed, failed)
+    return (passed, failed, errors)
 
 
 def normal_integration_tests():
-    passed, failed = run_whole_dir("integtests/")
+    passed, failed, errors = run_whole_dir("integtests/")
     if failed == 0:
         print(
             f"Normal integration tests:\n\033[32mAll {passed} tests passed\033[0m")
     else:
         print(f"Normal integration tests:\n\033[31m{failed} failed\033[0m")
+        for filename, errstring in errors:
+            print(f"Test {filename} failed:\n{errstring}")
 
 
 def debug_integration_tests():
-    passed, failed = run_whole_dir("integtests/debug/")
+    passed, failed, _ = run_whole_dir("integtests/debug/")
     if failed == 0:
         print(
             f"Debug integration tests:\n\033[32mAll {passed} tests passed\033[0m")
