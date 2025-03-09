@@ -1,0 +1,6 @@
+// EXPECT cats\n5\ndogs\n10
+let hm = {cats: 5, dogs: 10};
+for x in hm {
+  print(x);
+  print(hm[x]);
+}

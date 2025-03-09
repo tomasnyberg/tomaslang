@@ -1040,7 +1040,16 @@ impl Compiler {
     fn hash_map(&mut self) {
         let mut count = 0;
         while !self.check(TokenType::RightBrace) {
-            self.expression();
+            // Allow non-stringed keys, e.g. { cats: 5, dogs: 10 } rather than
+            // { "cats": 5, "dogs": 10 }
+            if self.peek(0).token_type == TokenType::Identifier {
+                let lexeme = self.peek(0).lexeme.clone();
+                let string = Value::String(Rc::new(RefCell::new(lexeme.chars().collect())));
+                self.emit_constant(string);
+                self.advance();
+            } else {
+                self.expression();
+            }
             count += 1;
             match self.peek(0).token_type {
                 TokenType::Colon => {
