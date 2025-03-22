@@ -14,7 +14,7 @@ To that end, I aim to support as many of my favorite features from other languag
 - [x] Python-like nested functions
 - [x] Rust-like iterators, e.g. `for i in 1..5 {}`
 - [x] Haskell-like list generation, e.g. `[1..5]`
-- [ ] Haskell-like list transformations, e.g. `map (+5) [1,2,3,4,5]`
+- [X] Haskell-like list transformations, e.g. `map even [1,2,3,4,5]`
 - [ ] Python-like list comprehensions, e.g. `[x*5 for x in xs]`
 - [ ] Python-like memoization (`@lru_cache`)
 - [X] Rust-like match statements
@@ -24,10 +24,27 @@ For an overview of all implemented and planned features, see [features.md](https
 
 ## Examples
 
+### Quicksort
+```cigg
+fn quicksort(xs) {
+  let n = len(xs);
+  // Rust-like match statements!
+  return match n {
+    0 => [];
+    1 => xs;
+    _ => {
+      // Haskell-like list transformations!
+      let less = filter ((x) => x < xs[0]) xs[1..n];
+      let greater = filter ((x) => x >= xs[0]) xs[1..n];
+      return quicksort(less) + [xs[0]] + quicksort(greater);
+    };
+  };
+}
+```
+
 ### Fibonacci
 ```cigg
 fn fib(n) {
-  // Rust-like match statements!
   return match n {
     0 => 0;
     1 => 1;
@@ -58,8 +75,6 @@ fn two_sum(xs, target) {
   }
   return [-1,-1];
 }
-
-print(two_sum(xs, xs[38] + xs[158]));
 ```
 
 ### Sieve of Erastothenes
@@ -84,11 +99,8 @@ fn sieve(n) {
     }
     // Lambdas!
     let is_prime = (x) => prime[x];
-    // Haskell-like list transformations!
     return filter is_prime [1..n];
 }
-// prints [1, 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47]
-print(sieve(50));
 ```
 
 ## Usage / Installation
