@@ -1,0 +1,5 @@
+// EXPECT 5\n[1, 2, 3, 4, 5]
+print(abs(-5));
+let negate = (x) => -x;
+print(map abs map negate [1..6]);
+
