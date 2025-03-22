@@ -1,0 +1,4 @@
+// EXPECT [10, 20, 30, 40, 50]
+let y = 10;
+let xs = [1..6];
+print(map ((x) => x*y) xs);

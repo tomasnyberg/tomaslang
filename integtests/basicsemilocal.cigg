@@ -1,0 +1,4 @@
+// EXPECT 100
+let x = 10;
+let lam = () => x * 10;
+print(lam());

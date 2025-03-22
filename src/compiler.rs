@@ -176,6 +176,8 @@ pub enum OpCode {
     SetGlobal,
     GetLocal,
     SetLocal,
+    GetSemiLocal,
+    SetSemiLocal,
     In,
     JumpIfFalse,
     JumpIfTrue,
@@ -270,25 +272,27 @@ impl OpCode {
             19 => OpCode::SetGlobal,
             20 => OpCode::GetLocal,
             21 => OpCode::SetLocal,
-            22 => OpCode::In,
-            23 => OpCode::JumpIfFalse,
-            24 => OpCode::JumpIfTrue,
-            25 => OpCode::JumpIfNull,
-            26 => OpCode::Jump,
-            27 => OpCode::Loop,
-            28 => OpCode::Call,
-            29 => OpCode::Negate,
-            30 => OpCode::Not,
-            31 => OpCode::Next,
-            32 => OpCode::Pop,
-            33 => OpCode::Range,
-            34 => OpCode::RaiseError,
-            35 => OpCode::Null,
-            36 => OpCode::True,
-            37 => OpCode::False,
-            38 => OpCode::Transform,
-            39 => OpCode::Return,
-            40 => OpCode::Eof,
+            22 => OpCode::GetSemiLocal,
+            23 => OpCode::SetSemiLocal,
+            24 => OpCode::In,
+            25 => OpCode::JumpIfFalse,
+            26 => OpCode::JumpIfTrue,
+            27 => OpCode::JumpIfNull,
+            28 => OpCode::Jump,
+            29 => OpCode::Loop,
+            30 => OpCode::Call,
+            31 => OpCode::Negate,
+            32 => OpCode::Not,
+            33 => OpCode::Next,
+            34 => OpCode::Pop,
+            35 => OpCode::Range,
+            36 => OpCode::RaiseError,
+            37 => OpCode::Null,
+            38 => OpCode::True,
+            39 => OpCode::False,
+            40 => OpCode::Transform,
+            41 => OpCode::Return,
+            42 => OpCode::Eof,
             _ => panic!("unexpected opcode (did you update this match after adding an op?)"),
         }
     }
@@ -523,22 +527,27 @@ impl Compiler {
         }
     }
 
-    fn resolve_local(&mut self, name: &Token) -> Option<u8> {
-        let locals = &self.compiling_funcs.last().unwrap().locals;
-        for (i, local) in locals.iter().enumerate().rev() {
-            if name.lexeme == local.name.lexeme {
-                if local.depth == -1 {
-                    self.error_at_current("Cannot read local variable in its own initializer");
+    // Looks through all the compiling functions to find also ones that are in enclosing scopes.
+    fn resolve_local(&mut self, name: &Token) -> Option<(u8, u8)> {
+        for (distance, func) in self.compiling_funcs.iter().rev().enumerate() {
+            for (i, local) in func.locals.iter().enumerate().rev() {
+                if name.lexeme == local.name.lexeme {
+                    if local.depth == -1 {
+                        self.error_at_current("Cannot read local variable in its own initializer");
+                    }
+                    return Some((distance as u8, i as u8));
                 }
-                return Some(i as u8);
             }
         }
         None
     }
 
-    fn ensure_not_const(&mut self, resolved: Option<u8>, arg: usize) {
-        if resolved.is_some() && self.compiling_funcs.last().unwrap().locals[arg].constant {
-            self.error_at_current("Cannot assign to constant variable");
+    fn ensure_not_const(&mut self, resolved: Option<(u8, u8)>) {
+        if let Some((distance, index)) = resolved {
+            let func_index = self.compiling_funcs.len() - 1 - (distance as usize);
+            if self.compiling_funcs[func_index].locals[index as usize].constant {
+                self.error_at_current("Cannot assign to constant variable");
+            }
         }
     }
 
@@ -549,10 +558,15 @@ impl Compiler {
         let get_op: OpCode;
         let arg: u8;
         let resolved = self.resolve_local(&var_token);
-        if resolved.is_some() {
-            arg = resolved.unwrap();
-            set_op = OpCode::SetLocal;
-            get_op = OpCode::GetLocal;
+        if let Some((distance, index)) = resolved {
+            arg = index;
+            if distance > 0 {
+                set_op = OpCode::SetSemiLocal;
+                get_op = OpCode::GetSemiLocal;
+            } else {
+                set_op = OpCode::SetLocal;
+                get_op = OpCode::GetLocal;
+            }
         } else {
             arg = self.identifier_constant();
             set_op = OpCode::SetGlobal;
@@ -562,7 +576,7 @@ impl Compiler {
         match operator {
             TokenType::Equal => {
                 self.advance();
-                self.ensure_not_const(resolved, arg as usize);
+                self.ensure_not_const(resolved);
                 self.expression();
                 self.emit_bytes(set_op as u8, arg);
             }
@@ -573,13 +587,18 @@ impl Compiler {
             | TokenType::SlashDownEqual
             | TokenType::PercentEqual => {
                 self.advance();
-                self.ensure_not_const(resolved, arg as usize);
+                self.ensure_not_const(resolved);
                 self.emit_bytes(get_op as u8, arg);
                 self.expression();
                 self.emit_compound_operator(operator);
                 self.emit_bytes(set_op as u8, arg);
             }
             _ => self.emit_bytes(get_op as u8, arg),
+        }
+        if let Some((distance, _)) = resolved {
+            if distance > 0 {
+                self.emit_byte(distance, false);
+            }
         }
     }
 
@@ -892,7 +911,7 @@ impl Compiler {
         // The loop variable needs to actually be on the stack. emit null until it gets set a value
         self.emit_byte(OpCode::Null as u8, true);
         let loop_var_name = self.peek(1).clone();
-        let loop_var_idx = self.resolve_local(&loop_var_name).unwrap();
+        let loop_var_idx = self.resolve_local(&loop_var_name).unwrap().1;
         self.consume(TokenType::In, "Expected 'in' after for loop variable");
         // Hopefully this is something iterable
         self.expression();

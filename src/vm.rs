@@ -538,6 +538,12 @@ impl VM {
         byte
     }
 
+    fn semi_local_idx_on_stack(&mut self) -> usize {
+        let local_idx = self.read_byte() as usize;
+        let frame_starts_distance = self.read_byte() as usize;
+        self.frame_starts[self.frame_starts.len() - 1 - frame_starts_distance] + local_idx
+    }
+
     fn local_idx_on_stack(&mut self) -> usize {
         let position = self.read_byte();
         position as usize + self.frame_starts.last().unwrap()
@@ -833,6 +839,16 @@ impl VM {
         }
     }
 
+    fn get_and_push_stack_var(&mut self, idx: usize) {
+        let value = self.stack[idx].clone();
+        self.push(value);
+    }
+
+    fn set_stack_var(&mut self, idx: usize) {
+        let value = self.peek(0).clone();
+        self.stack[idx] = value;
+    }
+
     pub fn run(&mut self) -> VmResult {
         loop {
             self.trace_execution();
@@ -979,13 +995,19 @@ impl VM {
                 }
                 OpCode::GetLocal => {
                     let idx = self.local_idx_on_stack();
-                    let value = self.stack[idx].clone();
-                    self.push(value);
+                    self.get_and_push_stack_var(idx);
                 }
                 OpCode::SetLocal => {
                     let idx = self.local_idx_on_stack();
-                    let value = self.peek(0).clone();
-                    self.stack[idx] = value;
+                    self.set_stack_var(idx);
+                }
+                OpCode::GetSemiLocal => {
+                    let idx = self.semi_local_idx_on_stack();
+                    self.get_and_push_stack_var(idx);
+                }
+                OpCode::SetSemiLocal => {
+                    let idx = self.semi_local_idx_on_stack();
+                    self.set_stack_var(idx);
                 }
                 OpCode::In => {
                     let target = self.pop();

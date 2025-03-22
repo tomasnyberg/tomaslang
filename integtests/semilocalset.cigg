@@ -1,0 +1,5 @@
+// EXPECT 5
+let x = 10;
+let lam = () => x = 5;
+lam();
+print(x);

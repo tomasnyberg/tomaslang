@@ -37,6 +37,13 @@ impl Chunk {
         offset + 2
     }
 
+    fn two_byte_instruction(&self, name: &str, offset: usize) -> usize {
+        let first = self.code[offset + 1];
+        let second = self.code[offset + 2];
+        println!("{:16} {:4}, {}", name, first, second);
+        offset + 3
+    }
+
     fn jump_instruction(&self, name: &str, sign: i16, offset: usize) -> usize {
         let jump = ((self.code[offset + 1] as i16) << 8) | self.code[offset + 2] as i16;
         println!(
@@ -80,6 +87,9 @@ impl Chunk {
             OpCode::SetGlobal => self.constant_instruction("SET_GLOBAL_OP", offset),
             OpCode::GetLocal => self.byte_instruction("GET_LOCAL_OP", offset),
             OpCode::SetLocal => self.byte_instruction("SET_LOCAL_OP", offset),
+            // Had to cut off the OP part here to avoid the numbers getting shifted
+            OpCode::GetSemiLocal => self.two_byte_instruction("GET_SEMI_LOCAL", offset),
+            OpCode::SetSemiLocal => self.two_byte_instruction("SET_SEMI_LOCAL", offset),
             OpCode::In => self.simple_instruction("IN_OP", offset),
             OpCode::JumpIfFalse => self.jump_instruction("JUMP_IF_FALSE_OP", 1, offset),
             OpCode::JumpIfTrue => self.jump_instruction("JUMP_IF_TRUE_OP", 1, offset),

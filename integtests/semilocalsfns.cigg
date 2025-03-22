@@ -1,0 +1,24 @@
+// EXPECT 10\n1000
+let x = 10;
+fn f() {
+    print(x);
+}
+
+f();
+
+fn f() {
+    let x = 5;
+    fn g() {
+        let y = 100;
+        fn h() {
+            let z = 2;
+            fn l() {
+                print(x*y*z);
+            }
+            l();
+        }
+        h();
+    }
+    g();
+}
+f();

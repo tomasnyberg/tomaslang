@@ -1,0 +1,18 @@
+// EXPECT [1, 2, 3, 4, 5, 7, 8, 10]
+fn quicksort(xs) {
+  if len(xs) <= 1 {
+    return xs;
+  }
+  let notfirst = [];
+  for i in 1..len(xs) {
+    notfirst :: xs[i];
+  }
+  let pivot = xs[0];
+  let less = filter ((x) => x < pivot) notfirst;
+  let greater = filter ((x) => x >= pivot) notfirst;
+  return quicksort(less) + [pivot] + quicksort(greater);
+}
+
+// Example usage:
+let arr = [5,3,8,4,2,7,1,10];
+print(quicksort(arr));
