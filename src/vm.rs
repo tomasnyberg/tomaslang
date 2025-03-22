@@ -516,6 +516,27 @@ impl VM {
         self.add_native_fn("min", 1, |vm_ref, args| {
             Self::fold_numbers(vm_ref, &args[0], f64::INFINITY, f64::min, "min")
         });
+        self.add_native_fn("int", 1, |vm_ref, args| {
+            let target = &args[0];
+            match target {
+                Value::Number(n) => Value::Number(n.floor()),
+                Value::String(s) => {
+                    let s_str: String = s.borrow().iter().collect();
+                    match s_str.parse::<f64>() {
+                        Ok(n) => Value::Number(n.floor()),
+                        Err(_) => {
+                            vm_ref
+                                .runtime_error(&format!("Expected number for int, got {}", s_str));
+                            Value::Null
+                        }
+                    }
+                }
+                _ => {
+                    vm_ref.runtime_error(&format!("Expected number for int, got {:?}", target));
+                    Value::Null
+                }
+            }
+        });
     }
 
     pub fn new(chunk: Chunk) -> Self {

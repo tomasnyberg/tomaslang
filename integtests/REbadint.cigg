@@ -1,0 +1,2 @@
+// EXPECT ERR Expected number for int, got this is not an int at [line 2] in script\nRuntime error
+int("this is not an int");

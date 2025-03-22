@@ -1,0 +1,3 @@
+// EXPECT ERR Expected number for int, got Null at [line 3] in script\nRuntime error
+
+int(null);

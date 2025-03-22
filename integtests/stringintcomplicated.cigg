@@ -1,0 +1,7 @@
+// EXPECT 15
+let s = "1 2 3 4 5";
+let tot = 0;
+for x in map int words s {
+    tot += x;
+}
+print(tot);

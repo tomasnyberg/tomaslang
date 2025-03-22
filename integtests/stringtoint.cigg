@@ -1,0 +1,9 @@
+// EXPECT 5\n100\n5
+let s = "6";
+print(int(s) - 1);
+
+s = "hje hopp i lingonskogen10";
+print(int(s[len(s)-2..len(s)]) * 10);
+
+let x = 5.525;
+print(int(x));
