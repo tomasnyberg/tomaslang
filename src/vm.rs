@@ -386,6 +386,31 @@ fn words_simple(vm: &mut VM) {
     words(vm, string, space);
 }
 
+fn unescape(s: &str) -> String {
+    let mut result = String::new();
+    let mut chars = s.chars();
+    while let Some(ch) = chars.next() {
+        if ch == '\\' {
+            if let Some(next) = chars.next() {
+                match next {
+                    'n' => result.push('\n'),
+                    't' => result.push('\t'),
+                    '\\' => result.push('\\'),
+                    other => {
+                        result.push(ch);
+                        result.push(other);
+                    }
+                }
+            } else {
+                result.push(ch);
+            }
+        } else {
+            result.push(ch);
+        }
+    }
+    result
+}
+
 fn words(vm: &mut VM, string: Value, delimiter: Value) {
     if !string.is_string() || !delimiter.is_string() {
         vm.runtime_error("Expected string as input and delimiter for words");
@@ -393,8 +418,10 @@ fn words(vm: &mut VM, string: Value, delimiter: Value) {
     }
     let string = string.as_string();
     let delimiter = delimiter.as_string();
-    let words = string.split(&delimiter);
-    let words: Vec<Value> = words
+    // Unescape the delimiter so that e.g. "\n" becomes an actual newline
+    let delimiter = unescape(&delimiter);
+    let words_iter = string.split(&delimiter);
+    let words: Vec<Value> = words_iter
         .map(|word| Value::String(Rc::new(RefCell::new(word.chars().collect()))))
         .collect();
     vm.push(Value::Array(Rc::new(RefCell::new(words))));
