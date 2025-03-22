@@ -1,0 +1,8 @@
+// EXPECT [2, 3, 4, 5]\n[1, 2]\n[1, 2, 3, 4, 5]\nhopp
+let xs = [1..6];
+print(xs[1..5]);
+print(xs[0..2]);
+print(xs[0..len(xs)]);
+
+let s = "Hej hopp i lingonskogen";
+print(s[4..8]);

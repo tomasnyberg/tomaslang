@@ -1,0 +1,3 @@
+// EXPECT ERR Cannot access hashmap with range at [line 3] in script\nRuntime error
+let xs = {cats: 5, dogs: 10};
+print(xs[1..10]);

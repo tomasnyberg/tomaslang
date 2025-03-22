@@ -225,15 +225,37 @@ impl Value {
                 }
                 None
             }
+            Value::Range(r) => {
+                let low = r.start;
+                let high = r.end;
+                if (low as f64) < 0.0
+                    || (high as f64) < 0.0
+                    || low > high
+                    || (high as f64) > target.len() as f64
+                {
+                    Some(format!(
+                        "Range {}..{} out of bounds for {}",
+                        low, high, target_type
+                    ))
+                } else {
+                    None
+                }
+            }
             _ => Some(format!("Expected number, got {}", index)),
         }
     }
 
     pub fn check_valid_access(&self, index: &Value, is_set: bool) -> Option<String> {
+        if is_set && index.is_range() {
+            return Some("Cannot set with range".to_string());
+        }
         match self {
             Value::Array(a) => self.check_index_inbounds(index, &a.borrow()),
             Value::String(s) => self.check_index_inbounds(index, &s.borrow()),
             Value::HashMap(m) => {
+                if index.is_range() {
+                    return Some("Cannot access hashmap with range".to_string());
+                }
                 if is_set {
                     return None;
                 }
@@ -651,9 +673,10 @@ impl VM {
                     return;
                 }
                 if !a.is_number() || !b.is_number() {
-                    self.runtime_error(
-                        "Expected numbers, a string, or two arrays for add operation",
-                    );
+                    self.runtime_error(&format!(
+                        "Expected numbers, a string, or two arrays for add operation, but got: {:?} and {:?}",
+                        a, b
+                    ));
                     return;
                 }
                 self.push(Value::Number(a.as_number() + b.as_number()));
@@ -752,6 +775,48 @@ impl VM {
         name.as_string()
     }
 
+    fn index_access(&mut self, target: &Value, index: Value) {
+        let result = match target {
+            Value::Array(a) => a.borrow()[index.as_number() as usize].clone(),
+            Value::String(s) => {
+                let s = s.borrow();
+                Value::String(Rc::new(RefCell::new(vec![s[index.as_number() as usize]])))
+            }
+            Value::HashMap(m) => {
+                let m = m.borrow();
+                m.0.get(&index).unwrap().clone()
+            }
+            _ => unreachable!(),
+        };
+        self.push(result);
+    }
+
+    fn collect_from_range<T: Clone>(&self, slice: &[T], range: &mut Range) -> Vec<T> {
+        let mut result = Vec::new();
+        while let Some(i) = range.next() {
+            let idx = i.as_number() as usize;
+            result.push(slice[idx].clone());
+        }
+        result
+    }
+
+    fn range_access(&mut self, target: &Value, range: &mut Range) {
+        let result = match target {
+            Value::Array(a) => {
+                let a = a.borrow();
+                let collected = self.collect_from_range(&a, range);
+                Value::Array(Rc::new(RefCell::new(collected)))
+            }
+            Value::String(s) => {
+                let s = s.borrow();
+                let collected = self.collect_from_range(&s, range);
+                Value::String(Rc::new(RefCell::new(collected)))
+            }
+            _ => unreachable!(),
+        };
+        self.push(result);
+    }
+
     fn access_ops(&mut self, op: OpCode) {
         let mut value_to_set = Value::Null;
         if op == OpCode::AccessSet {
@@ -779,20 +844,13 @@ impl VM {
         }
         match op {
             OpCode::Access => {
-                let result = match target {
-                    Value::Array(a) => a.borrow()[index.as_number() as usize].clone(),
-                    Value::String(s) => {
-                        let s = s.borrow();
-                        let idx = index.as_number() as usize;
-                        Value::String(Rc::new(RefCell::new(vec![s[idx]])))
+                match index {
+                    Value::Range(mut r) => self.range_access(&target, &mut r),
+                    // Default case since the value might be e.g. a string accessing a hm
+                    _ => {
+                        self.index_access(&target, index.clone());
                     }
-                    Value::HashMap(m) => {
-                        let m = m.borrow();
-                        m.0.get(&index).unwrap().clone()
-                    }
-                    _ => unreachable!(),
-                };
-                self.push(result);
+                }
             }
             OpCode::AccessSet => match target {
                 Value::Array(a) => a.borrow_mut()[index.as_number() as usize] = value_to_set,
