@@ -482,9 +482,7 @@ impl Compiler {
                             );
                         }
                         self.expression();
-                        self.emit_byte(OpCode::Transform as u8, true);
-                        // Identifies which transformation function to call
-                        self.emit_byte(i as u8, true);
+                        self.emit_transform(i);
                     }
                     "words" => {
                         let first_arg_type = self.peek(0).token_type;
@@ -509,6 +507,10 @@ impl Compiler {
                             self.expression();
                             self.emit_transform(i + 1); // Output words_simple instead.
                         }
+                    }
+                    "sort" => {
+                        self.expression();
+                        self.emit_transform(i);
                     }
                     _ => {}
                 }

@@ -427,7 +427,21 @@ fn words(vm: &mut VM, string: Value, delimiter: Value) {
     vm.push(Value::Array(Rc::new(RefCell::new(words))));
 }
 
-pub const TRANSFORMATION_FNS: [TransformationFunction; 4] = [
+fn sort(vm: &mut VM) {
+    let array = vm.pop();
+    match array {
+        Value::Array(a) => {
+            let mut a = a.borrow_mut().clone();
+            a.sort();
+            vm.push(Value::Array(Rc::new(RefCell::new(a))));
+        }
+        _ => {
+            vm.runtime_error("Expected array for sort");
+        }
+    }
+}
+
+pub const TRANSFORMATION_FNS: [TransformationFunction; 5] = [
     TransformationFunction {
         name: "map",
         function: map,
@@ -444,6 +458,10 @@ pub const TRANSFORMATION_FNS: [TransformationFunction; 4] = [
     TransformationFunction {
         name: "words_simple",
         function: words_simple,
+    },
+    TransformationFunction {
+        name: "sort",
+        function: sort,
     },
 ];
 
@@ -1351,5 +1369,13 @@ mod tests {
         let mut vm = get_vm(program);
         let result = vm.run();
         assert_eq!(result, VmResult::RuntimeError);
+    }
+
+    #[test]
+    fn simple_sort() {
+        let program = "let xs = [5,2,3,4,1]; print(sort xs); print(xs);";
+        let mut vm = get_vm(program);
+        let result = vm.run();
+        assert_eq!(result, VmResult::OK);
     }
 }

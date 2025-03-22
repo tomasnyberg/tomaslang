@@ -224,6 +224,7 @@ impl Scanner {
             "map" => Token::new(TokenType::Transformation, lexeme, self.line),
             "filter" => Token::new(TokenType::Transformation, lexeme, self.line),
             "words" => Token::new(TokenType::Transformation, lexeme, self.line),
+            "sort" => Token::new(TokenType::Transformation, lexeme, self.line),
             _ => Token::new(TokenType::Identifier, lexeme, self.line),
         }
     }
