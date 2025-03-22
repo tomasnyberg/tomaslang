@@ -1106,6 +1106,12 @@ impl VM {
                     let value = self.peek(0).clone();
                     self.push(value);
                 }
+                OpCode::Dup2 => {
+                    let first = self.peek(1).clone();
+                    let second = self.peek(0).clone();
+                    self.push(first);
+                    self.push(second);
+                }
                 OpCode::DefineGlobal => {
                     let name = self.global_identifier();
                     let value = self.pop();

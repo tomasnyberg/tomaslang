@@ -164,6 +164,7 @@ pub enum OpCode {
     Div,
     DivInt,
     Duplicate,
+    Dup2,
     Extend,
     Equal,
     Mod,
@@ -260,39 +261,40 @@ impl OpCode {
             7 => OpCode::Div,
             8 => OpCode::DivInt,
             9 => OpCode::Duplicate,
-            10 => OpCode::Extend,
-            11 => OpCode::Equal,
-            12 => OpCode::Mod,
-            13 => OpCode::NotEqual,
-            14 => OpCode::Greater,
-            15 => OpCode::GreaterEqual,
-            16 => OpCode::HashMap,
-            17 => OpCode::DefineGlobal,
-            18 => OpCode::GetGlobal,
-            19 => OpCode::SetGlobal,
-            20 => OpCode::GetLocal,
-            21 => OpCode::SetLocal,
-            22 => OpCode::GetSemiLocal,
-            23 => OpCode::SetSemiLocal,
-            24 => OpCode::In,
-            25 => OpCode::JumpIfFalse,
-            26 => OpCode::JumpIfTrue,
-            27 => OpCode::JumpIfNull,
-            28 => OpCode::Jump,
-            29 => OpCode::Loop,
-            30 => OpCode::Call,
-            31 => OpCode::Negate,
-            32 => OpCode::Not,
-            33 => OpCode::Next,
-            34 => OpCode::Pop,
-            35 => OpCode::Range,
-            36 => OpCode::RaiseError,
-            37 => OpCode::Null,
-            38 => OpCode::True,
-            39 => OpCode::False,
-            40 => OpCode::Transform,
-            41 => OpCode::Return,
-            42 => OpCode::Eof,
+            10 => OpCode::Dup2,
+            11 => OpCode::Extend,
+            12 => OpCode::Equal,
+            13 => OpCode::Mod,
+            14 => OpCode::NotEqual,
+            15 => OpCode::Greater,
+            16 => OpCode::GreaterEqual,
+            17 => OpCode::HashMap,
+            18 => OpCode::DefineGlobal,
+            19 => OpCode::GetGlobal,
+            20 => OpCode::SetGlobal,
+            21 => OpCode::GetLocal,
+            22 => OpCode::SetLocal,
+            23 => OpCode::GetSemiLocal,
+            24 => OpCode::SetSemiLocal,
+            25 => OpCode::In,
+            26 => OpCode::JumpIfFalse,
+            27 => OpCode::JumpIfTrue,
+            28 => OpCode::JumpIfNull,
+            29 => OpCode::Jump,
+            30 => OpCode::Loop,
+            31 => OpCode::Call,
+            32 => OpCode::Negate,
+            33 => OpCode::Not,
+            34 => OpCode::Next,
+            35 => OpCode::Pop,
+            36 => OpCode::Range,
+            37 => OpCode::RaiseError,
+            38 => OpCode::Null,
+            39 => OpCode::True,
+            40 => OpCode::False,
+            41 => OpCode::Transform,
+            42 => OpCode::Return,
+            43 => OpCode::Eof,
             _ => panic!("unexpected opcode (did you update this match after adding an op?)"),
         }
     }
@@ -1241,12 +1243,28 @@ impl Compiler {
     fn access(&mut self) {
         self.expression();
         self.consume(TokenType::RightBracket, "Expected ']' after index");
-        if self.match_(TokenType::Equal) {
-            self.expression();
-            self.emit_byte(OpCode::AccessSet as u8, true);
-            return;
+        let next = self.peek(0).token_type;
+        match next {
+            TokenType::Equal => {
+                self.advance();
+                self.expression();
+                self.emit_byte(OpCode::AccessSet as u8, true);
+            }
+            TokenType::PlusEqual
+            | TokenType::MinusEqual
+            | TokenType::StarEqual
+            | TokenType::SlashEqual
+            | TokenType::SlashDownEqual
+            | TokenType::PercentEqual => {
+                self.advance();
+                self.emit_byte(OpCode::Dup2 as u8, true);
+                self.emit_byte(OpCode::Access as u8, true);
+                self.expression();
+                self.emit_compound_operator(next);
+                self.emit_byte(OpCode::AccessSet as u8, true);
+            }
+            _ => self.emit_byte(OpCode::Access as u8, true),
         }
-        self.emit_byte(OpCode::Access as u8, true);
     }
 
     fn in_op(&mut self) {

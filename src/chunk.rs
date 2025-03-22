@@ -75,6 +75,7 @@ impl Chunk {
             OpCode::Div => self.simple_instruction("DIV_OP", offset),
             OpCode::DivInt => self.simple_instruction("DIV_INT_OP", offset),
             OpCode::Duplicate => self.simple_instruction("DUPLICATE_OP", offset),
+            OpCode::Dup2 => self.simple_instruction("DUPLICATE_OP", offset),
             OpCode::Extend => self.simple_instruction("EXTEND_OP", offset),
             OpCode::Equal => self.simple_instruction("EQUAL_OP", offset),
             OpCode::Mod => self.simple_instruction("MOD_OP", offset),
