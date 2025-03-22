@@ -42,6 +42,15 @@ fn quicksort(xs) {
 }
 ```
 
+### Day 1 Part 1 Advent of Code 2024
+```cigg
+let lines = filter ((l) => l != "") words "\n" read_file("bigin");
+let pairs = map ((line) => map int words "   " line) lines;
+let xs = sort map ((pair) => pair[0]) pairs;
+let ys = sort map ((pair) => pair[1]) pairs;
+print(sum(map ((i) => abs(xs[i] - ys[i])) [0..len(xs)]));
+```
+
 ### Fibonacci
 ```cigg
 fn fib(n) {
@@ -55,25 +64,6 @@ fib(10);
 // Or ternaries, if you prefer those :)
 fn tfib(n) {
   return a < 2 ? 1:fib(a-2) + fib(a-1);
-}
-```
-
-### Two-sum
-```cigg
-// Haskell-like list generation!
-let xs = [0..100000];
-
-fn two_sum(xs, target) {
-  // Python-like hashmaps/sets!
-  let seen = {};
-  for i in 0..100 {
-    let needed = target - xs[i];
-    if needed in seen {
-      return [seen[needed], i];
-    }
-    seen[xs[i]] = i;
-  }
-  return [-1,-1];
 }
 ```
 
