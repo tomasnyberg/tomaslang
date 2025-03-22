@@ -28,6 +28,7 @@
 - [X] Rust-like match
 - [X] any/all (Python-like)
 - [X] max/min (Python-like)
+- [X] sum (Python-like)
 - [X] Collection iteration (e.g. for x in xs)
 - [X] Range-based indexing (e.g. xs[1..5])
 - [ ] Multiline strings
@@ -41,6 +42,7 @@
   - [X] map
   - [X] filter
   - [X] words
+  - [X] sort
   - [ ] reduce
   - [ ] take
   - [ ] drop
