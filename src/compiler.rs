@@ -1412,7 +1412,8 @@ pub fn compile(input: &str) -> CompilerResult {
 mod tests {
     use crate::compiler::*;
 
-    fn match_bytecode(chunk: &Chunk, expected: &[u8]) {
+    fn verify_bytecode(chunk: &Chunk, expected: &[u8]) {
+        chunk.disassemble("test");
         assert_eq!(expected.len(), chunk.code.len(), "Length mismatch");
         for (i, byte) in expected.iter().enumerate() {
             assert_eq!(*byte, chunk.code[i], "Byte mismatch at index {}", i);
@@ -1439,8 +1440,7 @@ mod tests {
             OpCode::Pop as u8,
             OpCode::Eof as u8,
         ];
-        chunk.disassemble("test");
-        match_bytecode(&chunk, &expected);
+        verify_bytecode(&chunk, &expected);
     }
 
     #[test]
@@ -1461,8 +1461,7 @@ mod tests {
             OpCode::Pop as u8,
             OpCode::Eof as u8,
         ];
-        chunk.disassemble("test");
-        match_bytecode(&chunk, &expected);
+        verify_bytecode(&chunk, &expected);
     }
 
     #[test]
@@ -1483,8 +1482,7 @@ mod tests {
             OpCode::Pop as u8,
             OpCode::Eof as u8,
         ];
-        chunk.disassemble("test");
-        match_bytecode(&chunk, &expected);
+        verify_bytecode(&chunk, &expected);
     }
 
     #[test]
@@ -1503,8 +1501,7 @@ mod tests {
             OpCode::Pop as u8,
             OpCode::Eof as u8,
         ];
-        chunk.disassemble("test");
-        match_bytecode(&chunk, &expected);
+        verify_bytecode(&chunk, &expected);
     }
 
     #[test]
@@ -1519,8 +1516,7 @@ mod tests {
             OpCode::Pop as u8,
             OpCode::Eof as u8,
         ];
-        chunk.disassemble("test");
-        match_bytecode(&chunk, &expected);
+        verify_bytecode(&chunk, &expected);
     }
 
     #[test]
@@ -1532,8 +1528,7 @@ mod tests {
             OpCode::Pop as u8,
             OpCode::Eof as u8,
         ];
-        chunk.disassemble("test");
-        match_bytecode(&chunk, &expected);
+        verify_bytecode(&chunk, &expected);
     }
 
     #[test]
@@ -1549,8 +1544,7 @@ mod tests {
             1, // Points to "b"
             OpCode::Eof as u8,
         ];
-        chunk.disassemble("test");
-        match_bytecode(&chunk, &expected);
+        verify_bytecode(&chunk, &expected);
     }
 
     #[test]
@@ -1571,8 +1565,7 @@ mod tests {
             OpCode::Pop as u8,
             OpCode::Eof as u8,
         ];
-        chunk.disassemble("test");
-        match_bytecode(&chunk, &expected);
+        verify_bytecode(&chunk, &expected);
     }
 
     #[test]
@@ -1598,8 +1591,7 @@ mod tests {
             OpCode::Pop as u8,
             OpCode::Eof as u8,
         ];
-        chunk.disassemble("test");
-        match_bytecode(&chunk, &expected);
+        verify_bytecode(&chunk, &expected);
     }
 
     #[test]
@@ -1621,8 +1613,7 @@ mod tests {
             OpCode::Pop as u8,
             OpCode::Eof as u8,
         ];
-        chunk.disassemble("test");
-        match_bytecode(&chunk, &expected);
+        verify_bytecode(&chunk, &expected);
     }
 
     #[test]
@@ -1644,8 +1635,7 @@ mod tests {
             OpCode::Pop as u8,
             OpCode::Eof as u8,
         ];
-        chunk.disassemble("test");
-        match_bytecode(&chunk, &expected);
+        verify_bytecode(&chunk, &expected);
     }
 
     #[test]
@@ -1664,8 +1654,7 @@ mod tests {
             OpCode::Pop as u8,
             OpCode::Eof as u8,
         ];
-        chunk.disassemble("test");
-        match_bytecode(&chunk, &expected);
+        verify_bytecode(&chunk, &expected);
     }
 
     #[test]
@@ -1699,8 +1688,7 @@ mod tests {
             OpCode::Pop as u8, // Jump 1 TO
             OpCode::Eof as u8, // Jump 2 TO
         ];
-        chunk.disassemble("test");
-        match_bytecode(&chunk, &expected);
+        verify_bytecode(&chunk, &expected);
     }
 
     #[test]
@@ -1734,8 +1722,7 @@ mod tests {
             OpCode::Pop as u8,
             OpCode::Eof as u8, // Jump 2 TO
         ];
-        chunk.disassemble("test");
-        match_bytecode(&chunk, &expected);
+        verify_bytecode(&chunk, &expected);
     }
 
     #[test]
@@ -1787,8 +1774,7 @@ mod tests {
             OpCode::Pop as u8,
             OpCode::Eof as u8,
         ];
-        chunk.disassemble("test");
-        match_bytecode(&chunk, &expected);
+        verify_bytecode(&chunk, &expected);
     }
 
     #[test]
@@ -1821,8 +1807,7 @@ mod tests {
             OpCode::Pop as u8,
             OpCode::Eof as u8,
         ];
-        chunk.disassemble("test");
-        match_bytecode(&chunk, &expected);
+        verify_bytecode(&chunk, &expected);
     }
 
     #[test]
@@ -1844,8 +1829,7 @@ mod tests {
             OpCode::Pop as u8,
             OpCode::Eof as u8,
         ];
-        chunk.disassemble("test");
-        match_bytecode(&chunk, &expected);
+        verify_bytecode(&chunk, &expected);
     }
 
     #[test]
@@ -1864,8 +1848,7 @@ mod tests {
             OpCode::Pop as u8,
             OpCode::Eof as u8,
         ];
-        chunk.disassemble("test");
-        match_bytecode(&chunk, &expected);
+        verify_bytecode(&chunk, &expected);
     }
 
     #[test]
@@ -1928,8 +1911,7 @@ mod tests {
             OpCode::Pop as u8,
             OpCode::Eof as u8,
         ];
-        chunk.disassemble("test");
-        match_bytecode(&chunk, &expected);
+        verify_bytecode(&chunk, &expected);
     }
 
     #[test]
@@ -1954,7 +1936,6 @@ mod tests {
             OpCode::Pop as u8,
             OpCode::Eof as u8,
         ];
-        chunk.disassemble("test");
-        match_bytecode(&chunk, &expected);
+        verify_bytecode(&chunk, &expected);
     }
 }
