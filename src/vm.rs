@@ -225,22 +225,7 @@ impl Value {
                 }
                 None
             }
-            Value::Range(r) => {
-                let low = r.start;
-                let high = r.end;
-                if (low as f64) < 0.0
-                    || (high as f64) < 0.0
-                    || low as f64 > target.len() as f64
-                    || (high as f64) > target.len() as f64
-                {
-                    Some(format!(
-                        "Range {}..{} out of bounds for {}",
-                        low, high, target_type
-                    ))
-                } else {
-                    None
-                }
-            }
+            Value::Range(_) => None,
             _ => Some(format!("Expected number, got {}", index)),
         }
     }
@@ -870,9 +855,14 @@ impl VM {
         self.push(result);
     }
 
-    fn collect_from_range<T: Clone>(&self, slice: &[T], range: &mut Range) -> Vec<T> {
+    fn collect_from_range<T: Clone>(&mut self, slice: &[T], range: &mut Range) -> Vec<T> {
         let mut result = Vec::new();
         while let Some(i) = range.next() {
+            let num = i.as_number() as i32;
+            if num < 0 || num >= slice.len() as i32 {
+                self.runtime_error("Index out of bounds");
+                return result;
+            }
             let idx = i.as_number() as usize;
             result.push(slice[idx].clone());
         }

@@ -1,3 +1,3 @@
-// EXPECT ERR Range 1..500000 out of bounds for array at [line 3] in script\nRuntime error
+// EXPECT ERR Index out of bounds at [line 3] in script\nRuntime error
 let xs = [1..100];
-print(xs[1..500000]);
+print(xs[1..500]);
