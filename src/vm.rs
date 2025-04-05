@@ -287,7 +287,7 @@ pub struct VM {
     ip: usize,
     chunk: Chunk,
     had_runtime_error: bool,
-    run_until_return: bool,
+    internally_running_fns: usize,
     globals: HashMap<String, Value>,
     frame_starts: Vec<usize>,
 }
@@ -602,7 +602,7 @@ impl VM {
             stack: Vec::new(),
             ip: 0,
             chunk,
-            run_until_return: false,
+            internally_running_fns: 0,
             had_runtime_error: false,
             globals: HashMap::new(),
             frame_starts: vec![0],
@@ -702,9 +702,9 @@ impl VM {
 
     fn execute_cigg_function(&mut self, arg_c: usize) -> Value {
         self.initialize_cigg_function(arg_c);
-        self.run_until_return = true;
+        self.internally_running_fns += 1;
         self.run();
-        self.run_until_return = false;
+        self.internally_running_fns -= 1;
         self.pop()
     }
 
@@ -1246,7 +1246,7 @@ impl VM {
                         }
                     }
                     self.push(returned_value);
-                    if self.run_until_return {
+                    if self.internally_running_fns > 0 {
                         return VmResult::OK;
                     }
                 }
@@ -1393,6 +1393,19 @@ mod tests {
     #[test]
     fn simple_sort() {
         let program = "let xs = [5,2,3,4,1]; print(sort xs); print(xs);";
+        let mut vm = get_vm(program);
+        let result = vm.run();
+        assert_eq!(result, VmResult::OK);
+    }
+
+    #[test]
+    fn no_corrupting_state_when_nested_fns() {
+        let program = r#"
+let arrs = [[1]];
+fn safe(xs) {
+  return map ((x) => true) xs;
+}
+print(filter safe arrs);"#;
         let mut vm = get_vm(program);
         let result = vm.run();
         assert_eq!(result, VmResult::OK);

@@ -1,0 +1,11 @@
+// EXPECT [[1]]
+// This was causing the VM to go bananas before since it had a simple
+// flag for executing native cigg functions. When one of them exited, the second
+// One then resulted in a corrupted state.
+let arrs = [[1]];
+fn safe(xs) {
+  let result = map ((x) => true) xs;
+  return result[0];
+}
+print(filter safe arrs);
+
