@@ -65,12 +65,19 @@ pub struct Iterator {
 }
 
 impl Range {
-    pub fn new(start: i32, end: i32) -> Self {
+    pub fn new(start: i32, end: i32, step: Value) -> Self {
+        let step = if let Value::Number(_) = step {
+            step.as_number() as i32
+        } else if start < end {
+            1
+        } else {
+            -1
+        };
         Self {
             start,
             end,
             current: start,
-            step: if start < end { 1 } else { -1 },
+            step,
         }
     }
 
@@ -85,19 +92,18 @@ impl Range {
         } else {
             self.current
         };
-        format!("R {}..{}", lower, upper)
+        format!("R {}..{}:{}", lower, upper, self.step)
     }
 }
 
 impl Iterable for Range {
     fn next(&mut self) -> Option<Value> {
-        if self.current == self.end {
-            None
-        } else {
-            let current = self.current;
-            self.current += self.step;
-            Some(Value::Number(current as f64))
+        if (self.end - self.current) * self.step <= 0 {
+            return None;
         }
+        let current = self.current;
+        self.current += self.step;
+        Some(Value::Number(current as f64))
     }
     fn clone_box(&self) -> Box<dyn Iterable> {
         Box::new(self.clone())
@@ -740,6 +746,11 @@ impl Compiler {
 
     fn range(&mut self) {
         self.expression();
+        if self.match_(TokenType::Colon) {
+            self.expression();
+        } else {
+            self.emit_byte(OpCode::Null as u8, true);
+        }
         self.emit_byte(OpCode::Range as u8, true);
     }
 
@@ -1825,6 +1836,7 @@ mod tests {
             0,
             OpCode::Constant as u8,
             1,
+            OpCode::Null as u8,
             OpCode::Range as u8,
             OpCode::Pop as u8,
             OpCode::Eof as u8,
