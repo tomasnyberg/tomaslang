@@ -230,7 +230,7 @@ impl Value {
                 let high = r.end;
                 if (low as f64) < 0.0
                     || (high as f64) < 0.0
-                    || low > high
+                    || low as f64 > target.len() as f64
                     || (high as f64) > target.len() as f64
                 {
                     Some(format!(
