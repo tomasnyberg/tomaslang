@@ -2,16 +2,20 @@
 _A blazing~~ly fast~~ language_ 🚬🚬
 ____
 
-Cigg is a stack-based bytecode VM interpreted language written from scratch, by me, using Rust. The language is inspired by the _clox_ implementation from [Crafting Interpreters](https://craftinginterpreters.com/)
-(amazing book, you should buy it and read it). Cigg borrows some key ideas from clox, such as its Pratt parser, but is otherwise its own distinct language.
+Cigg is an interpreted language that runs on a stack-based bytecode VM. I've written it from scratch using Rust, though it is inspired by the _clox_ implementation from [Crafting Interpreters](https://craftinginterpreters.com/)
+(amazing book, highly recommend).
+
+Cigg aims to support both functional and imperative paradigms; it offers a comprehensive suite of collection transformations, but isn't too proud for
+good old-fashioned for-loops and mutation. It is far too proud to support OOP however, and it may or may not try to brick your computer if you use the word _extends_. No promises.
 
 ## Overview
-My intention with Cigg is for the language to be capable of solving coding puzzles in an elegant and concise way.
+My intention with Cigg is for the language to be capable of solving programming puzzles in an elegant and concise way.
 The (preliminary) end goal I have is to complete [Advent of Code](https://adventofcode.com/) 2025 using only Cigg.
 
-To that end, I aim to support as many of my favorite features from other languages as possible. Some examples include:
+To that end, I am working on adding support for as many of my favorite features from other languages as possible. Some examples include:
 
 - [x] Python-like nested functions
+- [X] JavaScript-like lambdas
 - [x] Rust-like iterators, e.g. `for i in 1..5 {}`
 - [x] Haskell-like list generation, e.g. `[1..5]`
 - [X] Haskell-like list transformations, e.g. `map even [1,2,3,4,5]`
