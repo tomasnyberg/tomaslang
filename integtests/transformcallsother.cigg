@@ -1,0 +1,12 @@
+// EXPECT [2, 3, 4, 5]
+// Ensures that manually executed functions (like the transformation ones) can call other functions
+// as well.
+fn g(x) {
+  return x + 1;
+}
+
+fn f(x) {
+  return g(x);
+}
+
+print(map f [1..5]);

@@ -272,7 +272,7 @@ pub struct VM {
     ip: usize,
     chunk: Chunk,
     had_runtime_error: bool,
-    internally_running_fns: usize,
+    internally_running_fns: Vec<usize>,
     globals: HashMap<String, Value>,
     frame_starts: Vec<usize>,
 }
@@ -587,7 +587,7 @@ impl VM {
             stack: Vec::new(),
             ip: 0,
             chunk,
-            internally_running_fns: 0,
+            internally_running_fns: Vec::new(),
             had_runtime_error: false,
             globals: HashMap::new(),
             frame_starts: vec![0],
@@ -686,10 +686,9 @@ impl VM {
     }
 
     fn execute_cigg_function(&mut self, arg_c: usize) -> Value {
+        self.internally_running_fns.push(self.stack.len() - 1);
         self.initialize_cigg_function(arg_c);
-        self.internally_running_fns += 1;
         self.run();
-        self.internally_running_fns -= 1;
         self.pop()
     }
 
@@ -1237,7 +1236,12 @@ impl VM {
                         }
                     }
                     self.push(returned_value);
-                    if self.internally_running_fns > 0 {
+                    // Are we the function that is running internally, as part of a transformation
+                    // call?
+                    if !self.internally_running_fns.is_empty()
+                        && self.stack.len() == *self.internally_running_fns.last().unwrap()
+                    {
+                        self.internally_running_fns.pop();
                         return VmResult::OK;
                     }
                 }
