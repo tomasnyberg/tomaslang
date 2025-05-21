@@ -71,7 +71,7 @@ fn tfib(n) {
 }
 ```
 
-### Sieve of Erastothenes
+### Sieve of Eratosthenes
 ```cigg
 fn sieve(n) {
     // Nested functions!
