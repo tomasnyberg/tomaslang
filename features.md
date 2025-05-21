@@ -47,7 +47,7 @@
   - [ ] reduce
   - [ ] take
   - [ ] drop
-  - [ ] takeWhile
+  - [X] takeWhile
   - [ ] dropWhile
 - [ ] Python-like list comprehensions, e.g. `[x*5 for x in xs]`
 

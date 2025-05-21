@@ -1,0 +1,5 @@
+// EXPECT [1, 2, 3, 4]
+fn lt5(x) {
+  return x < 5;
+}
+print(takeWhile lt5 [1..10]);

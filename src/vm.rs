@@ -359,6 +359,30 @@ fn filter(vm: &mut VM) {
     }
 }
 
+fn take_while(vm: &mut VM) {
+    let array = vm.pop();
+    let function = vm.pop();
+
+    let mut result = Vec::new();
+    match array {
+        Value::Array(a) => {
+            let a = a.borrow();
+            for item in a.iter() {
+                let keep = apply_function(vm, function.clone(), item.clone()).is_truthy();
+                if keep {
+                    result.push(item.clone());
+                } else {
+                    break;
+                }
+            }
+            vm.push(Value::Array(Rc::new(RefCell::new(result))));
+        }
+        _ => {
+            vm.runtime_error("Expected array for takeWhile");
+        }
+    }
+}
+
 fn words_delimiter(vm: &mut VM) {
     let string = vm.pop();
     let delimiter = vm.pop();
@@ -426,7 +450,7 @@ fn sort(vm: &mut VM) {
     }
 }
 
-pub const TRANSFORMATION_FNS: [TransformationFunction; 5] = [
+pub const TRANSFORMATION_FNS: [TransformationFunction; 6] = [
     TransformationFunction {
         name: "map",
         function: map,
@@ -447,6 +471,10 @@ pub const TRANSFORMATION_FNS: [TransformationFunction; 5] = [
     TransformationFunction {
         name: "sort",
         function: sort,
+    },
+    TransformationFunction {
+        name: "takeWhile",
+        function: take_while,
     },
 ];
 

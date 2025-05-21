@@ -472,7 +472,7 @@ impl Compiler {
         for (i, tf) in TRANSFORMATION_FNS.iter().enumerate() {
             if self.peek(1).lexeme == tf.name {
                 match tf.name {
-                    "map" | "filter" => {
+                    "map" | "filter" | "takeWhile" => {
                         if self.peek(0).token_type == TokenType::LeftParen {
                             self.consume(TokenType::LeftParen, "Expected '(' after transformation");
                             self.expression();
