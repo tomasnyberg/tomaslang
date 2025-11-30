@@ -16,6 +16,7 @@
 - [X] functions (with return values and params)
 - [X] Arrays
 - [X] Hashmaps / Sets
+  - [X] Support add and subtract
 - [X] Python-like 'in' operator (arrays, strings, hashmaps)
 - [X] I/O with outside world, e.g. read file/stdin
 
