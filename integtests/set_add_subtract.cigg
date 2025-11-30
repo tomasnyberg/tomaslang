@@ -1,0 +1,17 @@
+// EXPECT [1, 2, 3, 4, 5]\n[1, 2, 3]
+fn get_sorted(set) {
+  let result = [];
+  for x in set {
+    result :: x;
+  }
+  return result;
+}
+let one = {1, 2, 3};
+let two = {4, 5};
+
+let three = one + two;
+print(get_sorted(three));
+
+let four = three - two;
+print(get_sorted(four));
+

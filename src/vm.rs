@@ -193,6 +193,10 @@ impl Value {
         matches!(self, Value::Array(_))
     }
 
+    pub fn is_hashmap(&self) -> bool {
+        matches!(self, Value::HashMap(_))
+    }
+
     pub fn is_truthy(&self) -> bool {
         match self {
             Value::Bool(b) => *b,
@@ -763,9 +767,27 @@ impl VM {
                     self.push(Value::Array(Rc::new(RefCell::new(result))));
                     return;
                 }
+                if a.is_hashmap() && b.is_hashmap() {
+                    let a = match a {
+                        Value::HashMap(a) => a,
+                        _ => unreachable!(),
+                    };
+                    let b = match b {
+                        Value::HashMap(b) => b,
+                        _ => unreachable!(),
+                    };
+                    // TODO: This is sketchy since we can mutate the thing used as a key. So we can
+                    // have an issue where hash lookups start failling because we inserted
+                    // something as a key and then mutated it. Leaving it as is for now since
+                    // changing the entire Value type is complicated
+                    let mut result = a.borrow().0.clone();
+                    result.extend(b.borrow().0.clone());
+                    self.push(Value::HashMap(Rc::new(RefCell::new(CiggHashMap(result)))));
+                    return;
+                }
                 if !a.is_number() || !b.is_number() {
                     self.runtime_error(&format!(
-                        "Expected numbers, a string, or two arrays for add operation, but got: {:?} and {:?}",
+                        "Expected numbers, a string, arrays, or hashmaps for add operation, but got: {:?} and {:?}",
                         a, b
                     ));
                     return;
@@ -773,8 +795,31 @@ impl VM {
                 self.push(Value::Number(a.as_number() + b.as_number()));
             }
             OpCode::Sub => {
+                if a.is_hashmap() && b.is_hashmap() {
+                    let a = match a {
+                        Value::HashMap(a) => a,
+                        _ => unreachable!(),
+                    };
+                    let b = match b {
+                        Value::HashMap(b) => b,
+                        _ => unreachable!(),
+                    };
+                    // TODO: This is sketchy since we can mutate the thing used as a key. So we can
+                    // have an issue where hash lookups start failling because we inserted
+                    // something as a key and then mutated it. Leaving it as is for now since
+                    // changing the entire Value type is complicated
+                    let mut result = a.borrow().0.clone();
+                    for key in b.borrow().0.keys() {
+                        result.remove(key);
+                    }
+                    self.push(Value::HashMap(Rc::new(RefCell::new(CiggHashMap(result)))));
+                    return;
+                }
                 if !a.is_number() || !b.is_number() {
-                    self.runtime_error("Expected numbers to sub operation");
+                    self.runtime_error(&format!(
+                        "Expected numbers or two hashmaps for sub operation, but got: {:?} and {:?}",
+                        a, b
+                    ));
                     return;
                 }
                 self.push(Value::Number(a.as_number() - b.as_number()));
