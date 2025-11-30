@@ -32,7 +32,7 @@ runfile-release filename:
 # Build the release binary (put it in /usr/bin/cigg (!))
 build-cigg:
   cargo build --release
-  sudo cp ./target/release/tomaslang /usr/bin/cigg
+  sudo cp ./target/release/tomaslang /usr/local/bin/cigg
 
 # Build the debug binary (put it in /usr/bin/cigg-debug (!))
 build-cigg-debug:

@@ -111,7 +111,7 @@ REPL (in debug mode).
 
 ### Running Cigg
 Run `just build-cigg` for a release build of the language (optimized and does not include any debug information).
-This will add an executable in `/usr/bin/cigg`, which should automatically be on your PATH.
+This will add an executable in `/usr/local/bin/cigg`, which should automatically be on your PATH.
 
 You can then simply run 
 
