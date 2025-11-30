@@ -787,7 +787,7 @@ impl VM {
                 }
                 if !a.is_number() || !b.is_number() {
                     self.runtime_error(&format!(
-                        "Expected numbers, a string, two arrays or two hashmaps for add operation, but got: {:?} and {:?}",
+                        "Expected numbers, a string, arrays, or hashmaps for add operation, but got: {:?} and {:?}",
                         a, b
                     ));
                     return;
