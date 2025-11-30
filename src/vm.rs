@@ -281,7 +281,13 @@ pub struct VM {
     frame_starts: Vec<usize>,
 }
 
-#[derive(PartialEq, Clone, Debug)]
+impl PartialEq for NativeFn {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name && self.arity == other.arity
+    }
+}
+
+#[derive(Clone, Debug)]
 pub struct NativeFn {
     name: String,
     arity: u8,
