@@ -342,6 +342,7 @@ impl Compiler {
         rule(Slash,         None,                      Some(Self::binary), Precedence::Factor);
         rule(SlashDown,     None,                      Some(Self::binary), Precedence::Factor);
         rule(Star,          None,                      Some(Self::binary), Precedence::Factor);
+        rule(Underscore,    None,                      None,               Precedence::None);
         rule(Bang,          Some(Self::unary),         None,               Precedence::None);
         rule(BangEqual,     None,                      Some(Self::binary), Precedence::Equality);
         rule(Equal,         None,                      None,               Precedence::None);
@@ -1120,8 +1121,13 @@ impl Compiler {
         prefix_rule.unwrap()(self);
 
         while precedence <= self.rules[&self.peek(0).token_type].precedence {
+            let operator = self.peek(0).token_type;
+            let infix_rule = self.rules[&operator].infix;
+            if infix_rule.is_none() {
+                self.error_at_current("Unknown operator");
+                return;
+            }
             self.advance();
-            let infix_rule = self.rules[&self.peek(1).token_type].infix;
             infix_rule.unwrap()(self);
         }
     }
