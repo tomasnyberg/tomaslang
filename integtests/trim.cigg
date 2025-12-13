@@ -1,0 +1,5 @@
+// EXPECT hello\nspaced out\nalready-trimmed\n42
+print(trim("   hello   "));
+print(trim("   spaced out   "));
+print(trim("already-trimmed"));
+print(int(trim("         42         ")));

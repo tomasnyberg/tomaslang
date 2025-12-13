@@ -618,6 +618,19 @@ impl VM {
                 }
             }
         });
+        self.add_native_fn("trim", 1, |vm_ref, args| {
+            let target = &args[0];
+            match target {
+                Value::String(s) => {
+                    let trimmed: String = s.borrow().iter().collect::<String>().trim().to_string();
+                    Value::String(Rc::new(RefCell::new(trimmed.chars().collect())))
+                }
+                _ => {
+                    vm_ref.runtime_error(&format!("Expected string for trim, got {:?}", target));
+                    Value::Null
+                }
+            }
+        });
     }
 
     pub fn new(chunk: Chunk) -> Self {

@@ -1,0 +1,2 @@
+// EXPECT ERR Expected string for trim, got Number(1.0) at [line 2] in script\nRuntime error
+print(trim(1));
