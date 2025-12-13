@@ -1,0 +1,10 @@
+// EXPECT 10
+let total = 0;
+for i in 0..5 {
+  for j in 0..5 {
+    let y = i;
+    total += y;
+    break;
+  }
+}
+print(total);

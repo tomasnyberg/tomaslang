@@ -24,6 +24,8 @@ struct Compiler {
     loop_continue_tracker: Vec<(usize, usize)>,
     // For break: keep track of jumps that want to jump to the end
     loop_endjumps: Vec<Vec<usize>>,
+    // Track the scope depth where the current loop starts, to pop locals on break
+    loop_scope_depths: Vec<usize>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -399,6 +401,7 @@ impl Compiler {
             scope_depth: 0,
             loop_continue_tracker: Vec::new(),
             loop_endjumps: Vec::new(),
+            loop_scope_depths: Vec::new(),
         }
     }
 
@@ -915,6 +918,7 @@ impl Compiler {
 
     fn patch_loop_exit_jumps(&mut self) {
         let end_jumps = self.loop_endjumps.pop().unwrap();
+        self.loop_scope_depths.pop();
         for jump in end_jumps {
             self.patch_jump(jump);
         }
@@ -950,6 +954,7 @@ impl Compiler {
 
         let exit_jump = self.emit_jump(OpCode::JumpIfNull);
         self.loop_endjumps.push(vec![exit_jump]);
+        self.loop_scope_depths.push(self.scope_depth);
 
         self.emit_byte(OpCode::Pop as u8, true);
 
@@ -996,6 +1001,19 @@ impl Compiler {
             self.error_at_current("Cannot use 'break' outside of a loop");
             return;
         }
+
+        // Pop any locals that belong to scopes nested inside the loop before jumping out
+        let loop_scope_depth = *self.loop_scope_depths.last().unwrap();
+        let locals = &self.compiling_funcs.last_mut().unwrap().locals;
+        let to_pop = locals
+            .iter()
+            .rev()
+            .take_while(|local| local.depth > loop_scope_depth as i32)
+            .count();
+        for _ in 0..to_pop {
+            self.emit_byte(OpCode::Pop as u8, true);
+        }
+
         let exit_jump: usize = self.emit_jump(OpCode::Jump);
         self.loop_endjumps.last_mut().unwrap().push(exit_jump);
     }
@@ -1009,6 +1027,7 @@ impl Compiler {
         self.expression();
         let exit_jump: usize = self.emit_jump(OpCode::JumpIfFalse);
         self.loop_endjumps.push(Vec::new());
+        self.loop_scope_depths.push(self.scope_depth);
         self.emit_byte(OpCode::Pop as u8, true);
         self.statement();
         self.emit_loop(loop_start);

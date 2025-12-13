@@ -1,0 +1,63 @@
+// EXPECT 43093
+
+let total = 0;
+
+for i in 0..5 {
+  let stop_j = false;
+  for j in 0..5 {
+    let stop_k = false;
+    let j_local = 0;
+    for k in 0..10 {
+      let x = 55;
+      let inner = 0;
+      for a in 0..4 {
+        for b in 0..3 {
+          inner += i * x + a + b;
+          if b == 2 and k > 6 {
+            stop_k = true;
+            break;
+          }
+          if a == 3 and (i + j) % 2 == 0 {
+            break;
+          }
+        }
+        if stop_k {
+          break;
+        }
+        if a == 2 and k == 5 {
+          break;
+        }
+      }
+      total += inner;
+
+      if stop_k {
+        break;
+      }
+      if k == 8 {
+        break;
+      }
+      if k > 10 {
+        break;
+      }
+    }
+    let y = i;
+    total += y + j_local;
+    for t in 0..2 {
+      if t == 1 {
+        stop_j = true;
+        break;
+      }
+      if j > 1000 {
+        break;
+      }
+    }
+    if stop_j {
+      break;
+    }
+    break;
+  }
+  if i < 0 {
+    break;
+  }
+}
+print(total);
