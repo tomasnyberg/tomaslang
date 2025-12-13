@@ -1295,8 +1295,8 @@ impl VM {
                 }
                 OpCode::Range => {
                     let step = self.pop();
-                    let end = self.pop().as_number() as i32;
-                    let start = self.pop().as_number() as i32;
+                    let end = self.pop().as_number() as i64;
+                    let start = self.pop().as_number() as i64;
                     let range = Value::Range(Range::new(start, end, step));
                     self.push(range);
                 }

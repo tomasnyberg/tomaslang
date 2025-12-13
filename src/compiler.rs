@@ -52,10 +52,10 @@ pub trait Iterable: Debug {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Range {
-    pub start: i32,
-    pub end: i32,
-    pub current: i32,
-    pub step: i32,
+    pub start: i64,
+    pub end: i64,
+    pub current: i64,
+    pub step: i64,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -65,9 +65,9 @@ pub struct Iterator {
 }
 
 impl Range {
-    pub fn new(start: i32, end: i32, step: Value) -> Self {
+    pub fn new(start: i64, end: i64, step: Value) -> Self {
         let step = if let Value::Number(_) = step {
-            step.as_number() as i32
+            step.as_number() as i64
         } else if start < end {
             1
         } else {
