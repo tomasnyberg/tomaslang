@@ -1295,8 +1295,28 @@ impl VM {
                 }
                 OpCode::Range => {
                     let step = self.pop();
-                    let end = self.pop().as_number() as i64;
-                    let start = self.pop().as_number() as i64;
+                    let end_value = self.pop();
+                    let start_value = self.pop();
+
+                    let mut expect_number = |position: &str, value: Value| -> Option<i64> {
+                        if let Value::Number(n) = value {
+                            Some(n as i64)
+                        } else {
+                            self.runtime_error(&format!(
+                                "Expected number for range {}, got {}",
+                                position, value
+                            ));
+                            None
+                        }
+                    };
+
+                    let Some(start) = expect_number("start", start_value) else {
+                        return VmResult::RuntimeError;
+                    };
+                    let Some(end) = expect_number("end", end_value) else {
+                        return VmResult::RuntimeError;
+                    };
+
                     let range = Value::Range(Range::new(start, end, step));
                     self.push(range);
                 }

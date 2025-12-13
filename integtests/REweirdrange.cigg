@@ -1,0 +1,4 @@
+// EXPECT ERR Expected number for range end, got R 10..10:-1 at [line 2] in script\nRuntime error
+for i in 1..10..3 {
+ print(i);
+}
