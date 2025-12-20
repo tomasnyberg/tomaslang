@@ -1,0 +1,4 @@
+// EXPECT cbc
+let a = "abc";
+a[0] = "c";
+print(a);

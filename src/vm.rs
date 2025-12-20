@@ -1032,8 +1032,24 @@ impl VM {
             }
             OpCode::AccessSet => match target {
                 Value::Array(a) => a.borrow_mut()[index.as_number() as usize] = value_to_set,
-                Value::String(_) => {
-                    todo!();
+                Value::String(s) => {
+                    let new_char = match value_to_set {
+                        Value::String(ref chars) => {
+                            let chars = chars.borrow();
+                            if chars.len() != 1 {
+                                self.runtime_error(
+                                    "Expected single-character string for string assignment",
+                                );
+                                return;
+                            }
+                            chars[0]
+                        }
+                        _ => {
+                            self.runtime_error("Expected string for string assignment");
+                            return;
+                        }
+                    };
+                    s.borrow_mut()[index.as_number() as usize] = new_char;
                 }
                 Value::HashMap(m) => {
                     let mut m = m.borrow_mut();
