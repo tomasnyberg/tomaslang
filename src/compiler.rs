@@ -43,6 +43,7 @@ pub struct Function {
     locals: Vec<Local>,
     pub arity: u8,
     const_idx: usize,
+    pub depth: usize,
 }
 
 pub trait Iterable: Debug {
@@ -389,6 +390,7 @@ impl Compiler {
             locals: Vec::new(),
             arity: 0,
             const_idx: 0,
+            depth: 0,
         };
 
         Self {
@@ -593,6 +595,7 @@ impl Compiler {
                 self.ensure_not_const(resolved);
                 self.expression();
                 self.emit_bytes(set_op as u8, arg);
+                self.emit_semi_local_distance(resolved);
             }
             TokenType::PlusEqual
             | TokenType::MinusEqual
@@ -603,12 +606,21 @@ impl Compiler {
                 self.advance();
                 self.ensure_not_const(resolved);
                 self.emit_bytes(get_op as u8, arg);
+                self.emit_semi_local_distance(resolved);
                 self.expression();
                 self.emit_compound_operator(operator);
                 self.emit_bytes(set_op as u8, arg);
+                self.emit_semi_local_distance(resolved);
             }
-            _ => self.emit_bytes(get_op as u8, arg),
+            _ => {
+                self.emit_bytes(get_op as u8, arg);
+                self.emit_semi_local_distance(resolved);
+            }
         }
+    }
+
+    // Semilocal ops require an extra byte encoding how many scopes to walk.
+    fn emit_semi_local_distance(&mut self, resolved: Option<(u8, u8)>) {
         if let Some((distance, _)) = resolved {
             if distance > 0 {
                 self.emit_byte(distance, false);
@@ -1228,6 +1240,7 @@ impl Compiler {
             locals: Vec::new(),
             arity: 0,
             const_idx: 0, // Initialized later
+            depth: self.compiling_funcs.len(),
         };
         let const_idx = self.emit_constant(Value::Function(new_func.clone()));
         new_func.const_idx = const_idx as usize;

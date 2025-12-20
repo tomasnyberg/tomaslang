@@ -1,0 +1,12 @@
+// EXPECT 2
+let x = 1;
+
+fn f(n) {
+  if (n == 0) {
+    return x + 1;
+  }
+  return f(n - 1);
+}
+
+print(f(3));
+

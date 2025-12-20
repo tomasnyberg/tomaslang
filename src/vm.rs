@@ -279,6 +279,7 @@ pub struct VM {
     internally_running_fns: Vec<usize>,
     globals: HashMap<String, Value>,
     frame_starts: Vec<usize>,
+    frame_depths: Vec<usize>,
 }
 
 impl PartialEq for NativeFn {
@@ -642,6 +643,7 @@ impl VM {
             had_runtime_error: false,
             globals: HashMap::new(),
             frame_starts: vec![0],
+            frame_depths: vec![0],
         };
         result.add_native_fns();
         result
@@ -678,7 +680,23 @@ impl VM {
     fn semi_local_idx_on_stack(&mut self) -> usize {
         let local_idx = self.read_byte() as usize;
         let frame_starts_distance = self.read_byte() as usize;
-        self.frame_starts[self.frame_starts.len() - 1 - frame_starts_distance] + local_idx
+        let current_depth = *self.frame_depths.last().unwrap();
+        if frame_starts_distance > current_depth {
+            self.runtime_error("Invalid semilocal scope depth");
+            return 0;
+        }
+        let target_depth = current_depth - frame_starts_distance;
+        let frame_index = self
+            .frame_depths
+            .iter()
+            .rposition(|depth| *depth == target_depth);
+        match frame_index {
+            Some(index) => self.frame_starts[index] + local_idx,
+            None => {
+                self.runtime_error("Semilocal scope not found");
+                0
+            }
+        }
     }
 
     fn local_idx_on_stack(&mut self) -> usize {
@@ -721,12 +739,11 @@ impl VM {
     }
 
     fn initialize_cigg_function(&mut self, arg_c: usize) {
-        let function = match self.peek(arg_c) {
-            Value::Function(f) => f,
+        let (start, arity, depth) = match self.peek(arg_c) {
+            Value::Function(f) => (f.start, f.arity, f.depth),
             other => panic!("Expected function , got {}", other),
         };
-        let start = function.start;
-        if !self.check_arity(function.arity, arg_c) {
+        if !self.check_arity(arity, arg_c) {
             return;
         }
         let return_address = Value::ReturnAddress(self.ip);
@@ -734,6 +751,7 @@ impl VM {
         // TODO PERF: don't really like the idea of inserting with an offset
         self.insert(return_address, self.stack.len() - arg_c - 1);
         self.frame_starts.push(self.stack.len() - arg_c - 1);
+        self.frame_depths.push(depth);
     }
 
     fn execute_cigg_function(&mut self, arg_c: usize) -> Value {
@@ -1335,6 +1353,7 @@ impl VM {
                 OpCode::Return => {
                     let returned_value = self.pop();
                     let frame_start = self.frame_starts.pop().unwrap();
+                    self.frame_depths.pop();
                     // Clear the functions locals
                     while self.stack.len() > frame_start {
                         self.pop();
