@@ -30,6 +30,7 @@
 - [X] any/all (Python-like)
 - [X] max/min (Python-like)
 - [X] sum (Python-like)
+- [X] prod (similar to sum)
 - [X] Collection iteration (e.g. for x in xs)
 - [X] Range-based indexing (e.g. xs[1..5])
   - [X] Step-based range indexing (e.g. xs[1..5:2])

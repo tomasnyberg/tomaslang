@@ -593,6 +593,9 @@ impl VM {
         self.add_native_fn("sum", 1, |vm_ref, args| {
             Self::fold_numbers(vm_ref, &args[0], 0.0, |a, b| a + b, "sum")
         });
+        self.add_native_fn("prod", 1, |vm_ref, args| {
+            Self::fold_numbers(vm_ref, &args[0], 1.0, |a, b| a * b, "prod")
+        });
         self.add_native_fn("int", 1, |vm_ref, args| {
             let target = &args[0];
             match target {

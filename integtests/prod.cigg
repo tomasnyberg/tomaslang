@@ -1,0 +1,3 @@
+// EXPECT 120\n5040
+print(prod([1..6]));
+print(prod(map ((x) => x) [1..8]));
