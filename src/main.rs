@@ -155,7 +155,14 @@ fn repl() {
 }
 
 fn run_file(path: &str) {
-    let source = std::fs::read_to_string(path).unwrap();
+    let source = match std::fs::read_to_string(path) {
+        Ok(source) => source,
+        Err(_) => {
+            eprintln!("File not found: {}", path);
+            eprintln!("Runtime error");
+            return;
+        }
+    };
     interpret(&source, &mut VM::new(Chunk::new()));
 }
 
