@@ -1,0 +1,2 @@
+// EXPECT ERR [line 2] Error at ';': Cannot use 'return' outside of a function\nCompile error
+return;

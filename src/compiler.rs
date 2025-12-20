@@ -845,6 +845,10 @@ impl Compiler {
             TokenType::Return,
             "Expected 'return' to start return statement",
         );
+        let in_top_level = self.compiling_funcs.len() == 1;
+        if in_top_level {
+            self.error_at_current("Cannot use 'return' outside of a function");
+        }
         if self.match_(TokenType::Semicolon) {
             self.emit_bytes(OpCode::Null as u8, OpCode::Return as u8);
             return;
