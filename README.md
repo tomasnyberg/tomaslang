@@ -50,8 +50,10 @@ fn quicksort(xs) {
 ```cigg
 let lines = filter (l => l != "") words "\n" read_file("bigin");
 let pairs = map (line => map int words "   " line) lines;
+
 let xs = sort map (pair => pair[0]) pairs;
 let ys = sort map (pair => pair[1]) pairs;
+
 print(sum(map ((i) => abs(xs[i] - ys[i])) [0..len(xs)]));
 ```
 
@@ -61,9 +63,11 @@ let lines = filter (l => l != "") words "\n" read_file("in");
 
 fn find_max(line) {
   let nums = map int filter (d => d != "") words "" line;
+
   let biggest_that_isnt_last = max(nums[0..len(nums)-1]);
   let earliest_index = min(filter (i => nums[i] == biggest_that_isnt_last) [0..len(nums)]);
   let biggest_after_earliest = max(nums[earliest_index+1..len(nums)]);
+
   return int("" + biggest_that_isnt_last + biggest_after_earliest);
 }
 
@@ -79,36 +83,10 @@ fn fib(n) {
     _ => fib(n - 1) + fib(n - 2);
   };
 }
-fib(10);
+
 // Or ternaries, if you prefer those :)
 fn tfib(n) {
-  return a < 2 ? 1:fib(a-2) + fib(a-1);
-}
-```
-
-### Sieve of Eratosthenes
-```cigg
-fn sieve(n) {
-    // Nested functions!
-    fn expand(prime, p, nc) {
-        let i = p * p;
-        while i < nc + 1 {
-            prime[i] = false;
-            i += p;
-        }
-    }
-    // Python-like list generation!
-    global prime = [true]*(n + 1);
-    let p = 2;
-    while p * p <= n {
-      if prime[p] {
-        expand(prime, p, n);
-      }
-      p+=1;
-    }
-    // Lambdas!
-    let is_prime = (x) => prime[x];
-    return filter is_prime [1..n];
+  return n < 2 ? 1 : fib(n-2) + fib(n-1);
 }
 ```
 
