@@ -225,7 +225,12 @@ impl Value {
             Value::Number(n) => {
                 let index = *n as usize;
                 if index >= target.len() {
-                    return Some(format!("Index {} out of bounds for {}", index, target_type));
+                    return Some(format!(
+                        "Index {} out of bounds for {} (size {})",
+                        index,
+                        target_type,
+                        target.len()
+                    ));
                 }
                 None
             }
