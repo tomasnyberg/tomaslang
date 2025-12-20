@@ -28,7 +28,7 @@ For an overview of all implemented and planned features, see [features.md](https
 
 ## Examples
 
-### Quicksort
+### [Quicksort](https://github.com/tomasnyberg/tomaslang/blob/main/integtests/quicksort.cigg)
 ```cigg
 fn quicksort(xs) {
   let n = len(xs);

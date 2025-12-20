@@ -1,10 +1,14 @@
-// EXPECT 89\n120
+// EXPECT 89\n89\n120
 fn fib(a) {
   return match a {
     0 => 1;
     1 => 1;
     _ => fib(a-2) + fib(a-1);
   };
+}
+
+fn tfib(n) {
+  return n < 2 ? 1:fib(n-2) + fib(n-1);
 }
 
 fn fac(n) {
@@ -14,4 +18,5 @@ fn fac(n) {
   };
 }
 print(fib(10));
+print(tfib(10));
 print(fac(5));
