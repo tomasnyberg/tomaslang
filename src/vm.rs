@@ -508,15 +508,15 @@ impl VM {
         match target {
             Value::Array(a) => {
                 let array = a.borrow();
+                if array.is_empty() {
+                    vm.runtime_error(&format!("Empty array for {}", func_name));
+                    return Value::Null;
+                }
                 if !array.iter().all(|x| x.is_number()) {
                     vm.runtime_error(&format!("Expected array of numbers for {}", func_name));
                     return Value::Null;
                 }
                 let result = array.iter().map(|x| x.as_number()).fold(identity, op);
-                if result == identity {
-                    vm.runtime_error(&format!("Empty array for {}", func_name));
-                    return Value::Null;
-                }
                 Value::Number(result)
             }
             _ => {
