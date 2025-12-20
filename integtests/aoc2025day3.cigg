@@ -1,17 +1,17 @@
 // EXPECT 357\n3121910778619
-let lines = filter ((l) => l != "") words "," "987654321111111,811111111111119,234234234234278,818181911112111";
+let lines = filter (l => l != "") words "," "987654321111111,811111111111119,234234234234278,818181911112111";
 
 fn find_max_with_after(nums, start, after) {
   if (after == 0) {
     return [max(nums[start..len(nums)]), len(nums)];
   }
   let biggest_with_enough_after = max(nums[start..len(nums) - after]);
-  let earliest_index = min(filter ((i) => nums[i] == biggest_with_enough_after) [start..len(nums) - after]);
+  let earliest_index = min(filter (i => nums[i] == biggest_with_enough_after) [start..len(nums) - after]);
   return [biggest_with_enough_after, earliest_index+1];
 }
 
 fn find_max(line, after) {
-  let nums = map int filter ((d) => d != "") words "" line;
+  let nums = map int filter (d => d != "") words "" line;
   let num = "";
   let start = 0;
   while after >= 0 {
@@ -23,7 +23,7 @@ fn find_max(line, after) {
   return int(num);
 }
 
-print(sum(map ((line) => find_max(line, 1)) lines));
-print(sum(map ((line) => find_max(line, 11)) lines));
+print(sum(map (line => find_max(line, 1)) lines));
+print(sum(map (line => find_max(line, 11)) lines));
 
 

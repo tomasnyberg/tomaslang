@@ -38,8 +38,8 @@ fn quicksort(xs) {
     1 => xs;
     _ => {
       // Haskell-like list transformations!
-      let less = filter ((x) => x < xs[0]) xs[1..n];
-      let greater = filter ((x) => x >= xs[0]) xs[1..n];
+      let less = filter (x => x < xs[0]) xs[1..n];
+      let greater = filter (x => x >= xs[0]) xs[1..n];
       return quicksort(less) + [xs[0]] + quicksort(greater);
     };
   };
@@ -48,21 +48,21 @@ fn quicksort(xs) {
 
 ### Day 1 Part 1 Advent of Code 2024
 ```cigg
-let lines = filter ((l) => l != "") words "\n" read_file("bigin");
-let pairs = map ((line) => map int words "   " line) lines;
-let xs = sort map ((pair) => pair[0]) pairs;
-let ys = sort map ((pair) => pair[1]) pairs;
+let lines = filter (l => l != "") words "\n" read_file("bigin");
+let pairs = map (line => map int words "   " line) lines;
+let xs = sort map (pair => pair[0]) pairs;
+let ys = sort map (pair => pair[1]) pairs;
 print(sum(map ((i) => abs(xs[i] - ys[i])) [0..len(xs)]));
 ```
 
 ### Day 3 Part 1 Advent of Code 2025
 ```
-let lines = filter ((l) => l != "") words "\n" read_file("in");
+let lines = filter (l => l != "") words "\n" read_file("in");
 
 fn find_max(line) {
-  let nums = map int filter ((d) => d != "") words "" line;
+  let nums = map int filter (d => d != "") words "" line;
   let biggest_that_isnt_last = max(nums[0..len(nums)-1]);
-  let earliest_index = min(filter ((i) => nums[i] == biggest_that_isnt_last) [0..len(nums)]);
+  let earliest_index = min(filter (i => nums[i] == biggest_that_isnt_last) [0..len(nums)]);
   let biggest_after_earliest = max(nums[earliest_index+1..len(nums)]);
   return int("" + biggest_that_isnt_last + biggest_after_earliest);
 }

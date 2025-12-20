@@ -481,7 +481,13 @@ impl Compiler {
                     "map" | "filter" | "takeWhile" => {
                         if self.peek(0).token_type == TokenType::LeftParen {
                             self.consume(TokenType::LeftParen, "Expected '(' after transformation");
-                            self.expression();
+                            if self.peek(0).token_type == TokenType::Identifier
+                                && self.peek(-1).token_type == TokenType::BigRightArrow
+                            {
+                                self.lambda_function_simple_style();
+                            } else {
+                                self.expression();
+                            }
                             self.consume(
                                 TokenType::RightParen,
                                 "Expected ')' after transformation",
@@ -1100,7 +1106,7 @@ impl Compiler {
             || self.peek(-2).token_type == TokenType::BigRightArrow
             || self.peek(0).token_type == TokenType::RightParen
         {
-            self.lambda_function();
+            self.lambda_function_paren_style();
             return;
         }
         self.expression();
@@ -1189,7 +1195,8 @@ impl Compiler {
         );
     }
 
-    fn lambda_function(&mut self) {
+    // e.g. (x, y) => x + y;
+    fn lambda_function_paren_style(&mut self) {
         self.emit_function(
             &Token::new(TokenType::Identifier, "lambda".to_string(), 0),
             true,
@@ -1201,6 +1208,26 @@ impl Compiler {
             TokenType::BigRightArrow,
             "Expected '=>' after lambda parameters",
         );
+        self.lambda_function_body();
+    }
+
+    // e.g. map (x => x + 1) [1..5];
+    fn lambda_function_simple_style(&mut self) {
+        self.emit_function(
+            &Token::new(TokenType::Identifier, "lambda".to_string(), 0),
+            true,
+        );
+        self.begin_scope();
+        self.implicit_local_var("parameter name");
+        self.compiling_funcs.last_mut().unwrap().arity = 1;
+        self.consume(
+            TokenType::BigRightArrow,
+            "Expected '=>' after lambda parameter",
+        );
+        self.lambda_function_body();
+    }
+
+    fn lambda_function_body(&mut self) {
         if self.match_(TokenType::LeftBrace) {
             self.block();
             self.emit_bytes(OpCode::Null as u8, OpCode::Return as u8);
