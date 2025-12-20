@@ -55,6 +55,21 @@ let ys = sort map ((pair) => pair[1]) pairs;
 print(sum(map ((i) => abs(xs[i] - ys[i])) [0..len(xs)]));
 ```
 
+### Day 3 Part 1 Advent of Code 2025
+```
+let lines = filter ((l) => l != "") words "\n" read_file("in");
+
+fn find_max(line) {
+  let nums = map int filter ((d) => d != "") words "" line;
+  let biggest_that_isnt_last = max(nums[0..len(nums)-1]);
+  let earliest_index = min(filter ((i) => nums[i] == biggest_that_isnt_last) [0..len(nums)]);
+  let biggest_after_earliest = max(nums[earliest_index+1..len(nums)]);
+  return int("" + biggest_that_isnt_last + biggest_after_earliest);
+}
+
+print(sum(map find_max lines));
+```
+
 ### Fibonacci
 ```cigg
 fn fib(n) {
