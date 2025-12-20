@@ -1,0 +1,20 @@
+// EXPECT [[123, 328, 51, 64], [45, 64, 387, 23], [6, 98, 215]]
+let lines = filter ((l) => l != "") words "\n" read_file("integtests/data/aocday6example.data");
+fn to_nums(line) {
+  let curr = "";
+  let result = [];
+  for c in line {
+    if c == ' ' {
+      if curr != '' {
+        result :: int(curr);
+      }
+      curr = '';
+      continue;
+    }
+    curr :: c;
+  }
+  return result;
+}
+
+print(map to_nums lines[0..len(lines) - 1]);
+

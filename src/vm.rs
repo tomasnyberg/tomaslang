@@ -1108,7 +1108,12 @@ impl VM {
             match instruction {
                 OpCode::Constant => {
                     let constant = self.read_byte();
-                    let value = self.chunk.constants[constant as usize].clone();
+                    let value = match &self.chunk.constants[constant as usize] {
+                        Value::String(s) => {
+                            Value::String(Rc::new(RefCell::new(s.borrow().clone())))
+                        }
+                        other => other.clone(),
+                    };
                     self.push(value);
                 }
                 OpCode::Add
