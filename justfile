@@ -11,7 +11,13 @@ test-unit:
 
 # Run integration tests
 test-integration:
+  cargo build
   python3 integration_tests.py
+
+# Run the debug integration tests
+test-integration-debug:
+  cargo build --features debug_trace_execution,debug_disassemble > /dev/null 2>&1 && \
+  python3 integration_tests.py --debugintegration
 
 # Run the dev build (with debug info)
 run:
