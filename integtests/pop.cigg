@@ -1,0 +1,17 @@
+/*
+// EXPECT MULTI
+3
+[1, 2]
+2
+[1]
+1
+[]
+// EXPECT MULTI END
+*/
+let xs = [1, 2, 3];
+print(pop(xs));
+print(xs);
+print(pop(xs));
+print(xs);
+print(pop(xs));
+print(xs);

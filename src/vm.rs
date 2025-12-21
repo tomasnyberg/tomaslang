@@ -594,6 +594,22 @@ impl VM {
                 }
             }
         });
+        self.add_native_fn("pop", 1, |vm_ref, args| {
+            let target = &args[0];
+            match target {
+                Value::Array(a) => match a.borrow_mut().pop() {
+                    Some(value) => value,
+                    None => {
+                        vm_ref.runtime_error("Empty array for pop");
+                        Value::Null
+                    }
+                },
+                _ => {
+                    vm_ref.runtime_error("Expected array for pop");
+                    Value::Null
+                }
+            }
+        });
         self.add_native_fn("any", 1, |vm_ref, args| {
             let target = &args[0];
             match target {
