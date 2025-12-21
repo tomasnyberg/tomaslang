@@ -226,6 +226,7 @@ impl Scanner {
             "words" => Token::new(TokenType::Transformation, lexeme, self.line),
             "sort" => Token::new(TokenType::Transformation, lexeme, self.line),
             "takeWhile" => Token::new(TokenType::Transformation, lexeme, self.line),
+            "unique" => Token::new(TokenType::Transformation, lexeme, self.line),
             _ => Token::new(TokenType::Identifier, lexeme, self.line),
         }
     }
@@ -714,9 +715,13 @@ mod tests {
 
     #[test]
     fn parses_transformations() {
-        let input = "map";
+        let input = "map unique";
         let tokens = super::scan(input);
-        let expected = vec![TokenType::Transformation, TokenType::Eof];
+        let expected = vec![
+            TokenType::Transformation,
+            TokenType::Transformation,
+            TokenType::Eof,
+        ];
         verify_output(tokens, expected);
     }
 }

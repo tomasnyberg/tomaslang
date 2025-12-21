@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
-use std::{cell::RefCell, collections::HashMap, fmt, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, collections::HashSet, fmt, rc::Rc};
 
 use crate::{
     chunk::Chunk, compiler::Function, compiler::Iterable, compiler::Iterator, compiler::OpCode,
@@ -466,7 +466,30 @@ fn sort(vm: &mut VM) {
     }
 }
 
-pub const TRANSFORMATION_FNS: [TransformationFunction; 6] = [
+fn unique(vm: &mut VM) {
+    let array = vm.pop();
+    match array {
+        Value::Array(a) => {
+            let array = a.borrow();
+            if !array.iter().all(VM::is_hashable_value) {
+                vm.runtime_error("Expected array of hashable values for unique");
+                return;
+            }
+            let mut seen = HashSet::new();
+            let result: Vec<_> = array
+                .iter()
+                .filter(|&v| seen.insert(v.clone()))
+                .cloned()
+                .collect();
+            vm.push(Value::Array(Rc::new(RefCell::new(result))));
+        }
+        _ => {
+            vm.runtime_error("Expected array for unique");
+        }
+    }
+}
+
+pub const TRANSFORMATION_FNS: [TransformationFunction; 7] = [
     TransformationFunction {
         name: "map",
         function: map,
@@ -491,6 +514,10 @@ pub const TRANSFORMATION_FNS: [TransformationFunction; 6] = [
     TransformationFunction {
         name: "takeWhile",
         function: take_while,
+    },
+    TransformationFunction {
+        name: "unique",
+        function: unique,
     },
 ];
 
@@ -523,6 +550,19 @@ impl VM {
                 vm.runtime_error(&format!("Expected array of numbers for {}", func_name));
                 Value::Null
             }
+        }
+    }
+
+    fn is_hashable_value(value: &Value) -> bool {
+        match value {
+            Value::Number(_) | Value::Bool(_) | Value::Null | Value::String(_) => true,
+            Value::Array(a) => a.borrow().iter().all(Self::is_hashable_value),
+            Value::Function(_)
+            | Value::Range(_)
+            | Value::Iterable(_)
+            | Value::HashMap(_)
+            | Value::ReturnAddress(_)
+            | Value::NativeFn(_) => false,
         }
     }
 

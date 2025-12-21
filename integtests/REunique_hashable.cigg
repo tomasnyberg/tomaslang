@@ -1,0 +1,2 @@
+// EXPECT ERR Expected array of hashable values for unique at [line 2] in script\nRuntime error
+print(unique [{1: 2}, {1: 2}]);

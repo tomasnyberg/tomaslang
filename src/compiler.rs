@@ -528,7 +528,7 @@ impl Compiler {
                             self.emit_transform(i + 1); // Output words_simple instead.
                         }
                     }
-                    "sort" => {
+                    "sort" | "unique" => {
                         self.expression();
                         self.emit_transform(i);
                     }

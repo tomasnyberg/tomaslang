@@ -46,6 +46,7 @@
   - [X] filter
   - [X] words
   - [X] sort
+  - [X] unique
   - [ ] reduce
   - [ ] take
   - [ ] drop
