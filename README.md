@@ -10,7 +10,7 @@ good old-fashioned for-loops and mutation. It is far too proud to support OOP ho
 
 ## Overview
 My intention with Cigg is for the language to be capable of solving programming puzzles in an elegant and concise way.
-The (preliminary) end goal I have is to complete [Advent of Code](https://adventofcode.com/) 2025 using only Cigg.
+The (preliminary) end goal I have is to complete [Advent of Code](https://adventofcode.com/) 2025 using only Cigg. (update: [done](https://github.com/tomasnyberg/advent_of_cigg_2025)!)
 
 To that end, I am working on adding support for as many of my favorite features from other languages as possible. Some examples include:
 
