@@ -1,0 +1,8 @@
+// EXPECT 2\n7\n5\n-2\n8\n2\n16
+print(6 & 3);
+print(6 | 3);
+print(6 ^ 3);
+print(~1);
+print(1 << 3);
+print(8 >> 2);
+print(1 << 2 + 2);

@@ -22,6 +22,10 @@ pub enum TokenType {
     QuestionMark,
 
     Star,
+    BitAnd,
+    BitOr,
+    BitXor,
+    BitNot,
     Bang,
     BangEqual,
     Equal,
@@ -31,6 +35,8 @@ pub enum TokenType {
     BigRightArrow,
     Less,
     LessEqual,
+    ShiftLeft,
+    ShiftRight,
     SlashDown,
     Percent,
 
@@ -295,6 +301,10 @@ impl Scanner {
             ':' => self.special_second(c, TokenType::Colon, ':', TokenType::ColonColon),
             ';' => Token::new(TokenType::Semicolon, String::from(";"), self.line),
             '*' => self.special_second(c, TokenType::Star, '=', TokenType::StarEqual),
+            '&' => Token::new(TokenType::BitAnd, String::from("&"), self.line),
+            '|' => Token::new(TokenType::BitOr, String::from("|"), self.line),
+            '^' => Token::new(TokenType::BitXor, String::from("^"), self.line),
+            '~' => Token::new(TokenType::BitNot, String::from("~"), self.line),
             '%' => self.special_second(c, TokenType::Percent, '=', TokenType::PercentEqual),
             '?' => Token::new(TokenType::QuestionMark, String::from("?"), self.line),
             '_' => {
@@ -327,8 +337,28 @@ impl Scanner {
                 }
                 _ => Token::new(TokenType::Equal, String::from("="), self.line),
             },
-            '<' => self.special_second(c, TokenType::Less, '=', TokenType::LessEqual),
-            '>' => self.special_second(c, TokenType::Greater, '=', TokenType::GreaterEqual),
+            '<' => {
+                if self.peek() == '<' {
+                    self.advance();
+                    Token::new(TokenType::ShiftLeft, String::from("<<"), self.line)
+                } else if self.peek() == '=' {
+                    self.advance();
+                    Token::new(TokenType::LessEqual, String::from("<="), self.line)
+                } else {
+                    Token::new(TokenType::Less, String::from("<"), self.line)
+                }
+            }
+            '>' => {
+                if self.peek() == '>' {
+                    self.advance();
+                    Token::new(TokenType::ShiftRight, String::from(">>"), self.line)
+                } else if self.peek() == '=' {
+                    self.advance();
+                    Token::new(TokenType::GreaterEqual, String::from(">="), self.line)
+                } else {
+                    Token::new(TokenType::Greater, String::from(">"), self.line)
+                }
+            }
             '\'' | '"' => self.string(c),
             _ => Token::new(TokenType::Error, String::from(""), self.line),
         }

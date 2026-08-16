@@ -999,6 +999,37 @@ impl VM {
                     "Values in comparison are not comparable (not two strings nor two numbers",
                 );
             }
+            OpCode::BitAnd | OpCode::BitOr | OpCode::BitXor | OpCode::ShiftLeft | OpCode::ShiftRight => {
+                if !a.is_number() || !b.is_number() {
+                    self.runtime_error("Expected numbers for bitwise operation");
+                    return;
+                }
+                let a_i = a.as_number() as i64;
+                let b_i = b.as_number() as i64;
+                let result = match op {
+                    OpCode::BitAnd => a_i & b_i,
+                    OpCode::BitOr => a_i | b_i,
+                    OpCode::BitXor => a_i ^ b_i,
+                    OpCode::ShiftLeft | OpCode::ShiftRight => {
+                        if b_i < 0 {
+                            self.runtime_error("Expected non-negative shift count");
+                            return;
+                        }
+                        if b_i >= 64 {
+                            self.runtime_error("Shift count out of range");
+                            return;
+                        }
+                        let shift = b_i as u32;
+                        if op == OpCode::ShiftLeft {
+                            a_i << shift
+                        } else {
+                            a_i >> shift
+                        }
+                    }
+                    _ => unreachable!(),
+                };
+                self.push(Value::Number(result as f64));
+            }
             _ => panic!("Unknown binary op"),
         }
     }
@@ -1189,7 +1220,12 @@ impl VM {
                 | OpCode::Mod
                 | OpCode::NotEqual
                 | OpCode::Greater
-                | OpCode::GreaterEqual => {
+                | OpCode::GreaterEqual
+                | OpCode::BitAnd
+                | OpCode::BitOr
+                | OpCode::BitXor
+                | OpCode::ShiftLeft
+                | OpCode::ShiftRight => {
                     self.binary_op(instruction);
                 }
                 OpCode::Access | OpCode::AccessSet => {
@@ -1243,6 +1279,15 @@ impl VM {
                     let value = self.pop();
                     let result = Value::Bool(!&value.is_truthy());
                     self.push(result);
+                }
+                OpCode::BitNot => {
+                    let value = self.pop();
+                    if !value.is_number() {
+                        self.runtime_error("Expected number");
+                        continue;
+                    }
+                    let result = !(value.as_number() as i64);
+                    self.push(Value::Number(result as f64));
                 }
                 OpCode::Next => {
                     let iter_val = self.pop();
